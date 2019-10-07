@@ -5,22 +5,15 @@ import Vapor
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
     
     // Set host name and port
-    let serverConfiure = NIOServerConfig.default(hostname: "0.0.0.0", port: 9000)
+    let serverConfiure = NIOServerConfig.default(hostname: "0.0.0.0", port: 9001)
     services.register(serverConfiure)
     
-    // Create a new NIO websocket server
+    // WebSockets
     let wss = NIOWebSocketServer.default()
-    
-    // Add WebSocket upgrade support to GET /echo
+    let controller = GameController()
     wss.get("echo") { ws, req in
-        // Add a new on text callback
-        ws.onText { ws, text in
-            // Simply echo any received text
-            ws.send(text)
-        }
+        controller.setup(webSocket: ws)
     }
-    
-    // Register our server
     services.register(wss, as: WebSocketServer.self)
     
     // MARK: - Default
