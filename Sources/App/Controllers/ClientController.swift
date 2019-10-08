@@ -12,22 +12,22 @@ enum PlayerRequestError: Error {
 }
 
 class ClientController {
-    
+
     weak var socket: WebSocket?
     var player: Player
-    
+
     init(socket: WebSocket, username: String) {
         self.socket = socket
         self.player = Player(username: username)
     }
-    
+
     func request(
         actions: [PlayerAction],
         withType type: PlayerRequest.RequestType,
         onLoop eventLoop: EventLoop
         ) throws -> Future<PlayerResponse?> {
         let request = PlayerRequest(actions: actions, type: type, player: player)
-        let data = try JSONEncoder().encode(request)
+        let data = try BlackjackEncoder().encode(request)
         guard let socket = socket else {
             throw PlayerRequestError.missingSocket
         }
@@ -38,7 +38,7 @@ class ClientController {
         } else {
             socket.onBinary { (_, data) in
                 do {
-                    let response = try JSONDecoder().decode(
+                    let response = try BlackjackDecoder().decode(
                         PlayerResponse.self,
                         from: data
                     )
@@ -50,5 +50,5 @@ class ClientController {
         }
         return promise.futureResult
     }
-    
+
 }
