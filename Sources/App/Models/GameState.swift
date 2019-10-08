@@ -24,8 +24,21 @@ enum Suit: String, Codable {
     }
 }
 
+
 enum Rank: String, Codable {
-    case ace, two, three, four, five, six, seven, eight, nine, ten, jack, queen, king
+    case ace = "A"
+    case two = "2"
+    case three = "3"
+    case four = "4"
+    case five = "5"
+    case six = "6"
+    case seven = "7"
+    case eight = "8"
+    case nine = "9"
+    case ten = "10"
+    case jack = "J"
+    case queen = "Q"
+    case king = "K"
 }
 
 enum Colour: String {
@@ -60,10 +73,16 @@ struct Hand: Codable {
 
 struct Player: Codable {
     let username: String
-    var hands: [Hand]
-    var insurance: Int
+    var hands: [Hand] = []
+    var insurance: Int = 0
     var winnings: Int {
-        return hands.reduce(0, { (total, hand) -> Int in total + hand.winnings })
+        return hands.reduce(0) { (total, hand) -> Int in
+            total + hand.winnings
+        }
+    }
+
+    init(username: String) {
+        self.username = username
     }
 }
 
@@ -83,6 +102,11 @@ struct PlayerResponse: Codable {
 }
 
 struct PlayerRequest: Codable {
+    enum RequestType: String, Codable {
+        case waiting, ended, inProgress
+    }
+    
     let actions: [PlayerAction]
+    let type: RequestType
     let player: Player
 }

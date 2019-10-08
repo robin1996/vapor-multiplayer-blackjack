@@ -10,11 +10,11 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     
     // WebSockets
     let wss = NIOWebSocketServer.default()
-    let controller = GameController()
-    wss.get("echo", String.parameter) { ws, req in
+    let controller = PlayerController()
+    wss.get("player", String.parameter) { ws, req in
         let name = try req.parameters.next(String.self)
         ws.send("Hello \(name)")
-        controller.setup(webSocket: ws)
+        controller.setup(webSocket: ws, withName: name)
     }
     services.register(wss, as: WebSocketServer.self)
     
