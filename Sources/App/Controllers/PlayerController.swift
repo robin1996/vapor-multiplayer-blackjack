@@ -18,17 +18,17 @@ enum PlayerResponseError: Error {
 class Client {
     weak var socket: WebSocket?
     var player: Player
-    let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
 
     init(socket: WebSocket, username: String) {
         self.socket = socket
         self.player = Player(username: username)
-
-        #warning("Dummy")
-        player.hands = [DummyData.hand]
     }
 
-    func request(actions: [PlayerAction], type: PlayerRequest.RequestType) throws -> Future<PlayerResponse?> {
+    func request(
+        actions: [PlayerAction],
+        withType type: PlayerRequest.RequestType,
+        onLoop eventLoop: EventLoop
+    ) throws -> Future<PlayerResponse?> {
         let request = PlayerRequest(actions: actions, type: type, player: player)
         let data = try JSONEncoder().encode(request)
         guard let socket = socket else {
@@ -40,10 +40,15 @@ class Client {
             promise.succeed(result: nil)
         } else {
             socket.onBinary { (_, data) in
-                guard let response = try? JSONDecoder().decode(PlayerResponse.self, from: data) else {
-                    fatalError("Decoding error")
+                do {
+                    let response = try JSONDecoder().decode(
+                        PlayerResponse.self,
+                        from: data
+                    )
+                    promise.succeed(result: response)
+                } catch {
+                    promise.fail(error: error)
                 }
-                promise.succeed(result: response)
             }
         }
         return promise.futureResult
@@ -66,21 +71,6 @@ class PlayerController {
         return array
     }
     var game: GameController?
-//    var responseHandler: ((WebSocket, Data) -> Void)?
-//
-//    init() {
-//        responseHandler = { (socket, data) in
-//            let response = try? JSONDecoder().decode(PlayerResponse.self, from: data)
-//            let client = self._clients[ObjectIdentifier(socket)]
-//            // Handle response here
-//
-//            #warning("Dummy")
-//            print("🎉 Response from \(client?.player.username) 🎉")
-//            print(response)
-//            client?.player.hands[0].cards.append(DummyData.card)
-//            try? client?.request(actions: [.hit], type: .inProgress)
-//        }
-//    }
 
     func sendGlobal(message: String) {
         print("Message sent: \(message)")
@@ -93,19 +83,18 @@ class PlayerController {
         let client = Client(socket: webSocket, username: username)
         let id = ObjectIdentifier(webSocket)
         _clients[id] = client
-//        webSocket.onCloseCode { [weak self] (_) in
-//            self?.remove(webSocket: webSocket)
-//        }
         webSocket.onText { [weak self] (_, text) in
             self?.sendGlobal(message: text)
         }
+//        webSocket.onCloseCode { [weak self] (_) in
+//            self?.remove(webSocket: webSocket)
+//        }
 //        webSocket.onError { [weak self] (webSocket, _) in
 //            self?.remove(webSocket: webSocket)
 //        }
-//        webSocket.onBinary(responseHandler!)
         print("New client joined!")
         sendGlobal(message: "New client joined!")
-//        try? client.request(actions: [], type: .waiting)
+        game?.end()
         game = GameController(clients: clients)
         game?.start()
     }
@@ -120,10 +109,11 @@ class PlayerController {
 
 class GameController {
 
-    var deck: Deck = []
-    var clients: [Client]
-    var turn = 0
-    var client: Client {
+    private let gameLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+    private var deck: Deck = []
+    private var clients: [Client]
+    private var turn = 0
+    private var client: Client {
         return clients[Int(Double(turn).truncatingRemainder(dividingBy: Double(clients.count)))]
     }
 
@@ -132,14 +122,27 @@ class GameController {
     }
 
     func start() {
+        clients.forEach { (client) in
+            #warning("Dummy")
+            client.player.hands = [DummyData.hand]
+        }
         deck = Deck.standard()
         takeTurn()
+    }
+
+    func end() {
+        try! gameLoop.close()
     }
 
     private func takeTurn() {
         let client = self.client
         print("🤞 Requesting action from \(client.player.username)")
-        (try! client.request(actions: [.hit], type: .inProgress)).addAwaiter { (result) in
+        (try! client.request(
+            actions: [.hit],
+            withType: .inProgress,
+            onLoop: gameLoop
+        )).addAwaiter { [weak self] (result) in
+            guard let self = self else { return }
             if let unwrap = result.result, let result = unwrap {
                 print("🤩 Got a response!!!")
                 switch result.action {
