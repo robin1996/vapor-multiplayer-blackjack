@@ -9,7 +9,7 @@ import Foundation
 
 enum Suit: String, Codable, CaseIterable {
     case spades, hearts, diamonds, clubs
-
+    
     var symbol: Character {
         switch self {
         case .spades:
@@ -55,19 +55,65 @@ struct Card: Codable {
             return .black
         }
     }
+    
+    var lowValue: Int {
+        switch rank {
+        case .ace: return 1
+        case .two: return 2
+        case .three: return 3
+        case .four: return 4
+        case .five: return 5
+        case .six: return 6
+        case .seven: return 7
+        case .eight: return 8
+        case .nine: return 9
+        case .ten: return 10
+        case .jack: return 10
+        case .queen: return 10
+        case .king: return 10
+        }
+    }
+    
+    var highValue: Int {
+        if rank == .ace {
+            return 11
+        }
+        return lowValue
+    }
+    
 }
 
 struct Hand: Codable {
     enum TotalType: String, Codable {
         case hard, soft
     }
-
+    
     let id: Int
     var cards: [Card]
     var totalType: TotalType
-    var total: Int
+    var total: String = ""
     var stake: Int
     var winnings: Int
+
+    func getTotal() -> String {
+        let lowTotal = cards.sum { (card) -> Int in
+            card.lowValue
+        }
+        let hightTotal = cards.sum { (card) -> Int in
+            card.highValue
+        }
+        if hightTotal == 21 && cards.count == 2 {
+            return "Blackjack"
+        }
+        if hightTotal != lowTotal {
+            return "\(hightTotal)/\(lowTotal)"
+        }
+        return "\(hightTotal)"
+    }
+    
+    mutating func updateTotal() {
+        total = getTotal()
+    }
 }
 
 struct Player: Codable {
@@ -75,11 +121,11 @@ struct Player: Codable {
     var hands: [Hand] = []
     var insurance: Int = 0
     var winnings: Int {
-        return hands.reduce(0) { (total, hand) -> Int in
-            total + hand.winnings
+        return hands.sum { (hand) -> Int in
+            return hand.winnings
         }
     }
-
+    
     init(username: String) {
         self.username = username
     }
@@ -104,7 +150,7 @@ struct PlayerRequest: Codable {
     enum RequestType: String, Codable {
         case waiting, ended, inProgress
     }
-
+    
     let actions: [PlayerAction]
     let type: RequestType
     let player: Player

@@ -10,7 +10,14 @@ import Foundation
 enum DummyData {
     
     static var hand: Hand {
-        return Hand(id: 42, cards: [card], totalType: .hard, total: 1234, stake: 4321, winnings: 2323)
+        return Hand(
+            id: 42,
+            cards: [card],
+            totalType: .hard,
+            total: "initial total",
+            stake: 5451,
+            winnings: 412
+        )
     }
     
     static var card: Card {

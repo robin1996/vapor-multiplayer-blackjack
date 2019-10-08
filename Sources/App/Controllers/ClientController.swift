@@ -25,7 +25,12 @@ class ClientController {
         actions: [PlayerAction],
         withType type: PlayerRequest.RequestType,
         onLoop eventLoop: EventLoop
-        ) throws -> Future<PlayerResponse?> {
+    ) throws -> Future<PlayerResponse?> {
+        // Update total var for encoding
+        for (index, _) in player.hands.enumerated() {
+            player.hands[index].updateTotal()
+        }
+        // Create request
         let request = PlayerRequest(actions: actions, type: type, player: player)
         let data = try BlackjackEncoder().encode(request)
         guard let socket = socket else {
