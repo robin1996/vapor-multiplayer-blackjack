@@ -10,6 +10,7 @@ import Foundation
 typealias Deck = [Card]
 
 extension Deck {
+
     static func standard() -> Deck {
         var deck = Deck()
         for s in Suit.allCases {
@@ -19,4 +20,13 @@ extension Deck {
         }
         return deck
     }
+
+    mutating func drawCard() -> Card {
+        let count = self.count
+        let index = Int.random(in: 0...(count - 1))
+        let card = self[index]
+        remove(at: index)
+        return card
+    }
+
 }
