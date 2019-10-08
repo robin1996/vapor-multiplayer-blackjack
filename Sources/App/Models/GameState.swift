@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Suit: String, Codable {
+enum Suit: String, Codable, CaseIterable {
     case spades, hearts, diamonds, clubs
 
     var symbol: Character {
@@ -24,8 +24,7 @@ enum Suit: String, Codable {
     }
 }
 
-
-enum Rank: String, Codable {
+enum Rank: String, Codable, CaseIterable {
     case ace = "A"
     case two = "2"
     case three = "3"
@@ -105,7 +104,7 @@ struct PlayerRequest: Codable {
     enum RequestType: String, Codable {
         case waiting, ended, inProgress
     }
-    
+
     let actions: [PlayerAction]
     let type: RequestType
     let player: Player
