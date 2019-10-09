@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Suit: String, Codable, CaseIterable {
+enum Suit: String, Encodable, CaseIterable {
     case spades, hearts, diamonds, clubs
     
     var symbol: Character {
@@ -24,7 +24,7 @@ enum Suit: String, Codable, CaseIterable {
     }
 }
 
-enum Rank: String, Codable, CaseIterable {
+enum Rank: String, Encodable, CaseIterable {
     case ace = "A"
     case two = "2"
     case three = "3"
@@ -44,7 +44,7 @@ enum Colour: String {
     case black, red
 }
 
-struct Card: Codable {
+struct Card: Encodable {
     let suit: Suit
     let rank: Rank
     var colour: Colour {
@@ -83,19 +83,21 @@ struct Card: Codable {
     
 }
 
-struct Hand: Codable {
+struct Hand: Encodable {
     enum TotalType: String, Codable {
         case hard, soft
+    }
+    
+    enum CodingKeys: String, CodingKey {
+        case id, cards, totalTyoe, stake, winnings, total
     }
     
     let id: Int
     var cards: [Card]
     var totalType: TotalType
-    var total: String = ""
     var stake: Int
     var winnings: Int
-
-    func getTotal() -> String {
+    var total: String {
         let lowTotal = cards.sum { (card) -> Int in
             card.lowValue
         }
@@ -111,12 +113,18 @@ struct Hand: Codable {
         return "\(hightTotal)"
     }
     
-    mutating func updateTotal() {
-        total = getTotal()
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(cards, forKey: .cards)
+        try container.encode(totalType, forKey: .totalTyoe)
+        try container.encode(stake, forKey: .stake)
+        try container.encode(winnings, forKey: .winnings)
+        try container.encode(total, forKey: .total)
     }
 }
 
-struct Player: Codable {
+struct Player: Encodable {
     let username: String
     var hands: [Hand] = []
     var insurance: Int = 0
@@ -131,7 +139,7 @@ struct Player: Codable {
     }
 }
 
-struct GameState: Codable {
+struct GameState: Encodable {
     var players: [Player]
     var currentPlayer: Player
     var dealer: Player
@@ -141,12 +149,12 @@ enum PlayerAction: String, Codable {
     case hit, stand, double, split, stake
 }
 
-struct PlayerResponse: Codable {
+struct PlayerResponse: Decodable {
     let action: PlayerAction
     var value: Int?
 }
 
-struct PlayerRequest: Codable {
+struct PlayerRequest: Encodable {
     enum RequestType: String, Codable {
         case waiting, ended, inProgress
     }

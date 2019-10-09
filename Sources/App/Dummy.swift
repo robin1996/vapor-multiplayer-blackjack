@@ -14,7 +14,6 @@ enum DummyData {
             id: 42,
             cards: [card],
             totalType: .hard,
-            total: "initial total",
             stake: 5451,
             winnings: 412
         )
