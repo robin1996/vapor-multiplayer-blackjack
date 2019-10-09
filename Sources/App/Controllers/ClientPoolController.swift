@@ -26,7 +26,7 @@ class ClientPoolController {
     var game: GameController?
 
     func sendGlobal(message: String) {
-        print("Message sent: \(message)")
+        print("🤙 Message sent: \(message)")
         clients.forEach { (client) in
             client.socket?.send(message)
         }
@@ -45,7 +45,6 @@ class ClientPoolController {
 //        webSocket.onError { [weak self] (webSocket, _) in
 //            self?.remove(webSocket: webSocket)
 //        }
-        print("New client joined!")
         sendGlobal(message: "New client joined!")
         game?.end()
         game = GameController(clients: clients, delegate: self)
@@ -61,7 +60,7 @@ class ClientPoolController {
 }
 
 extension ClientPoolController: GameControllerDelegate {
-    
+
     private func nameList(of clients: Clients) -> String {
         return clients.reduce("") { (string, client) -> String in
             "\(string) \(["🤩", "🤯", "🥳", "😎"][Int.random(in: 0...3)]) \(client.player.username) "
@@ -71,7 +70,7 @@ extension ClientPoolController: GameControllerDelegate {
     func gameStarted(with clients: Clients, gameController: GameController) {
         sendGlobal(message: "Game started with \(nameList(of: clients))")
     }
-    
+
     func gameEnded(with clients: Clients, gameController: GameController) {
         sendGlobal(message: "Game ended with \(nameList(of: clients))")
     }
