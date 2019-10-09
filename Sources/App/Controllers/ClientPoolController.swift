@@ -7,11 +7,13 @@
 
 import Vapor
 
+typealias Clients = [ClientController]
+
 class ClientPoolController {
 
     private var _clients = [ObjectIdentifier: ClientController]()
-    var clients: [ClientController] {
-        var array = [ClientController]()
+    var clients: Clients {
+        var array = Clients()
         for (id, client) in _clients {
             guard client.socket != nil else {
                 _clients.removeValue(forKey: id)
@@ -46,7 +48,7 @@ class ClientPoolController {
         print("New client joined!")
         sendGlobal(message: "New client joined!")
         game?.end()
-        game = GameController(clients: clients)
+        game = GameController(clients: clients, delegate: self)
         game?.start()
     }
 
@@ -55,5 +57,23 @@ class ClientPoolController {
 //        print("Client disconnected.")
 //        sendGlobal(message: "Client diconnected.")
 //    }
+
+}
+
+extension ClientPoolController: GameControllerDelegate {
+    
+    private func nameList(of clients: Clients) -> String {
+        return clients.reduce("") { (string, client) -> String in
+            "\(string) \(["🤩", "🤯", "🥳", "😎"][Int.random(in: 0...3)]) \(client.player.username) "
+        }
+    }
+
+    func gameStarted(with clients: Clients, gameController: GameController) {
+        sendGlobal(message: "Game started with \(nameList(of: clients))")
+    }
+    
+    func gameEnded(with clients: Clients, gameController: GameController) {
+        sendGlobal(message: "Game ended with \(nameList(of: clients))")
+    }
 
 }

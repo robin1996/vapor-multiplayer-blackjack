@@ -7,18 +7,25 @@
 
 import Vapor
 
+protocol GameControllerDelegate: AnyObject {
+    func gameStarted(with clients: Clients, gameController: GameController)
+    func gameEnded(with clients: Clients, gameController: GameController)
+}
+
 class GameController {
     
     private let gameLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
     private var deck: Deck = []
-    private var clients: [ClientController]
+    private var clients: Clients
     private var turn = 0
     private var client: ClientController {
         return clients[Int(Double(turn).truncatingRemainder(dividingBy: Double(clients.count)))]
     }
+    weak var delegate: GameControllerDelegate?
     
-    init(clients: [ClientController]) {
+    init(clients: Clients, delegate: GameControllerDelegate) {
         self.clients = clients
+        self.delegate = delegate
     }
     
     func start() {
@@ -27,11 +34,13 @@ class GameController {
             client.player.hands = [DummyData.hand]
         }
         deck = Deck.standard()
+        delegate?.gameStarted(with: clients, gameController: self)
         takeTurn()
     }
     
     func end() {
         try! gameLoop.close()
+        delegate?.gameEnded(with: clients, gameController: self)
     }
     
     private func takeTurn() {

@@ -55,7 +55,6 @@ struct Card: Encodable {
             return .black
         }
     }
-    
     var lowValue: Int {
         switch rank {
         case .ace: return 1
@@ -73,14 +72,12 @@ struct Card: Encodable {
         case .king: return 10
         }
     }
-    
     var highValue: Int {
         if rank == .ace {
             return 11
         }
         return lowValue
     }
-    
 }
 
 struct Hand: Encodable {
