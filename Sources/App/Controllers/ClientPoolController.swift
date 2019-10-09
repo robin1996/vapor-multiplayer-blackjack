@@ -26,7 +26,7 @@ class ClientPoolController {
     var game: GameController?
 
     func sendGlobal(message: String) {
-        print("🤙 Message sent: \(message)")
+        print("☎️ Message sent: \(message)")
         clients.forEach { (client) in
             client.socket?.send(message)
         }

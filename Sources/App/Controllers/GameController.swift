@@ -82,7 +82,7 @@ class GameController {
         }
         print("🤞 Requesting action from \(client.player.username)")
         try! client.request(
-            actions: [.hit],
+            actions: [.hit, .stand],
             withType: .inProgress,
             onLoop: gameLoop
         ).addAwaiter(callback: { [weak self] (result) in
@@ -92,7 +92,9 @@ class GameController {
             switch action {
             case .hit:
                 self.hit()
-            case .split, .double, .stand:
+            case .stand:
+                self.stand()
+            case .split, .double:
                 print("⚠️ UNSUPPORTED ACTION ⚠️"); fallthrough
             case .stake:
                 print("⚠️ UNEXPECTED STAKE ⚠️"); fallthrough
@@ -116,6 +118,18 @@ class GameController {
         }
     }
 
+    func stand() {
+        let hand = client.player.hands[0]
+        hand.hasStood = true
+        try! client.request(
+            actions: [],
+            withType: .waiting,
+            onLoop: gameLoop
+        ).always { [weak self] in
+            self?.nextTurn()
+        }
+    }
+
     // MARK: Helpers
 
     func nextTurn() {
@@ -128,7 +142,7 @@ class GameController {
     /// - Parameter hand: Hand to check.
     /// - Returns: True if the hand is still in play.
     func handStillInPlay(_ hand: Hand) -> Bool {
-//        return hand.lowTotal < 21
+//        return hand.lowTotal < 21 && !hand.hasStood
         return true
     }
 

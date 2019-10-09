@@ -86,14 +86,14 @@ class Hand: Encodable {
     }
 
     enum CodingKeys: String, CodingKey {
-        case id, cards, totalType, stake, winnings, total
+        case cards, totalType, stake, winnings, total
     }
 
-    let id: Int = 0
     var cards: [Card] = []
     var totalType: TotalType = .soft
     var stake: Int
     var winnings: Int = 0
+    var hasStood = false // Shouldn't be encoded
     var total: String {
         let lowTotal = self.lowTotal
         let hightTotal = cards.sum { (card) -> Int in
@@ -119,7 +119,6 @@ class Hand: Encodable {
 
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
-        try container.encode(id, forKey: .id)
         try container.encode(cards, forKey: .cards)
         try container.encode(totalType, forKey: .totalType)
         try container.encode(stake, forKey: .stake)
