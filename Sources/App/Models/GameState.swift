@@ -9,7 +9,7 @@ import Foundation
 
 enum Suit: String, Encodable, CaseIterable {
     case spades, hearts, diamonds, clubs
-    
+
     var symbol: Character {
         switch self {
         case .spades:
@@ -80,24 +80,22 @@ struct Card: Encodable {
     }
 }
 
-struct Hand: Encodable {
+class Hand: Encodable {
     enum TotalType: String, Codable {
         case hard, soft
     }
-    
+
     enum CodingKeys: String, CodingKey {
-        case id, cards, totalTyoe, stake, winnings, total
+        case id, cards, totalType, stake, winnings, total
     }
-    
-    let id: Int
-    var cards: [Card]
-    var totalType: TotalType
+
+    let id: Int = 0
+    var cards: [Card] = []
+    var totalType: TotalType = .soft
     var stake: Int
-    var winnings: Int
+    var winnings: Int = 0
     var total: String {
-        let lowTotal = cards.sum { (card) -> Int in
-            card.lowValue
-        }
+        let lowTotal = self.lowTotal
         let hightTotal = cards.sum { (card) -> Int in
             card.highValue
         }
@@ -109,19 +107,28 @@ struct Hand: Encodable {
         }
         return "\(hightTotal)"
     }
-    
+    var lowTotal: Int {
+        return cards.sum({ (card) -> Int in
+            card.lowValue
+        })
+    }
+
+    init(stake: Int) {
+        self.stake = stake
+    }
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)
         try container.encode(cards, forKey: .cards)
-        try container.encode(totalType, forKey: .totalTyoe)
+        try container.encode(totalType, forKey: .totalType)
         try container.encode(stake, forKey: .stake)
         try container.encode(winnings, forKey: .winnings)
         try container.encode(total, forKey: .total)
     }
 }
 
-struct Player: Encodable {
+class Player: Encodable {
     let username: String
     var hands: [Hand] = []
     var insurance: Int = 0
@@ -130,17 +137,17 @@ struct Player: Encodable {
             return hand.winnings
         }
     }
-    
+
     init(username: String) {
         self.username = username
     }
 }
 
-struct GameState: Encodable {
-    var players: [Player]
-    var currentPlayer: Player
-    var dealer: Player
-}
+//struct GameState: Encodable {
+//    var players: [Player]
+//    var currentPlayer: Player
+//    var dealer: Player
+//}
 
 enum PlayerAction: String, Codable {
     case hit, stand, double, split, stake
@@ -153,9 +160,9 @@ struct PlayerResponse: Decodable {
 
 struct PlayerRequest: Encodable {
     enum RequestType: String, Codable {
-        case waiting, ended, inProgress
+        case waiting, ended, inProgress, bust
     }
-    
+
     let actions: [PlayerAction]
     let type: RequestType
     let player: Player
