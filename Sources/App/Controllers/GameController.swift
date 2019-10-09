@@ -157,4 +157,15 @@ class GameController {
         return true
     }
 
+    /// Checks if the game is over.
+    ///
+    /// - Returns: True if the game is over.
+    func isGameOver() -> Bool {
+        return !clients.reduce(false) { (inPlay, client) -> Bool in
+            inPlay || client.player.hands.reduce(false, { (inPlay, hand) -> Bool in
+                inPlay || self.handStillInPlay(hand)
+            })
+        }
+    }
+
 }

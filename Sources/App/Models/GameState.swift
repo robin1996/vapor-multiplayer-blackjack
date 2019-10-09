@@ -102,8 +102,11 @@ class Hand: Encodable {
         if hightTotal == 21 && cards.count == 2 {
             return "Blackjack"
         }
+        if hightTotal > 21 {
+            return "\(lowTotal)"
+        }
         if hightTotal != lowTotal {
-            return "\(hightTotal)/\(lowTotal)"
+            return "\(lowTotal)/\(hightTotal)"
         }
         return "\(hightTotal)"
     }
@@ -159,7 +162,7 @@ struct PlayerResponse: Decodable {
 
 struct PlayerRequest: Encodable {
     enum RequestType: String, Codable {
-        case waiting, ended, inProgress, bust
+        case waiting, ended, inProgress, bust, win, lose
     }
 
     let actions: [PlayerAction]
