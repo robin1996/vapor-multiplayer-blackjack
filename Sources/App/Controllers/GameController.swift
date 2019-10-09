@@ -42,15 +42,23 @@ class GameController {
     // MARK: - GamePlay
 
     private func takeStake() {
-        print("💸 Requesting stake from \(client.player.username)")
-        try! client.request(actions: [.stake], withType: .inProgress, onLoop: gameLoop).addAwaiter { [weak client, weak self] (result) in
+        print("🤑 Requesting stake from \(client.player.username)")
+        try! client.request(
+            actions: [.stake],
+            withType: .inProgress,
+            onLoop: gameLoop
+        ).addAwaiter { [weak client, weak self] (result) in
             guard let client = client, let self = self else { print("☢️ GAME OR CLIENT DEAD ☢️"); return }
             guard result.result??.action == .stake, let value = result.result??.value else {
                 print("⚠️ BAD STAKE RESPONSE ⚠️"); return
             }
-            print("🤑 Staking \(value)p")
+            print("💸 Staking \(value)p")
             client.player.hands = [Hand(stake: value)]
-            try! client.request(actions: [], withType: .waiting, onLoop: self.gameLoop).always {
+            try! client.request(
+                actions: [],
+                withType: .waiting,
+                onLoop: self.gameLoop
+            ).always {
                 self.turn += 1
                 if self.turn >= self.clients.count {
                     self.takeTurn()
@@ -75,8 +83,11 @@ class GameController {
                 actions: [],
                 withType: .waiting,
                 onLoop: gameLoop
-            ).always { [weak self] in
-                self?.nextTurn()
+            ).always {
+                // Artificial delay
+                self.gameLoop.scheduleTask(in: TimeAmount.seconds(1)) {
+                    self.nextTurn()
+                }
             }
             return
         }
