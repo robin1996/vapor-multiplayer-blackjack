@@ -60,16 +60,33 @@ class GameController {
     }
 
     private func takeTurn() {
-        guard handStillInPlay(client.player.hands[0]) else {
+        let hand = client.player.hands[0]
+        guard handStillInPlay(hand) else {
             print("⏩ Skipping \(client.player.username)")
             nextTurn()
             return
         }
+        guard hand.cards.count >= 2 else {
+            print("🃏 Dealing to \(client.player.username)")
+            hand.cards.append(self.deck.drawCard())
+            try! client.request(
+                actions: [],
+                withType: .waiting,
+                onLoop: gameLoop
+            ).always { [weak self] in
+                self?.nextTurn()
+            }
+            return
+        }
         print("🤞 Requesting action from \(client.player.username)")
-        try! client.request(actions: [.hit], withType: .inProgress, onLoop: gameLoop).addAwaiter(callback: { [weak self] (result) in
+        try! client.request(
+            actions: [.hit],
+            withType: .inProgress,
+            onLoop: gameLoop
+        ).addAwaiter(callback: { [weak self] (result) in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
             guard let action = result.result??.action else { print("⚠️ BAD RESPONSE ⚠️"); return }
-            print("👌 Executing response instruction")
+            print("👌 Executing response instruction \(action.rawValue)")
             switch action {
             case .hit:
                 self.hit()
@@ -109,7 +126,8 @@ class GameController {
     /// - Parameter hand: Hand to check.
     /// - Returns: True if the hand is still in play.
     func handStillInPlay(_ hand: Hand) -> Bool {
-        return hand.lowTotal < 21
+//        return hand.lowTotal < 21
+        return true
     }
 
 }
