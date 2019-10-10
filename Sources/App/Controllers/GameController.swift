@@ -26,6 +26,12 @@ class GameController {
     private var client: ClientController {
         return clients[Int(turn % clients.count)]
     }
+    private var hand: Hand? {
+        guard !client.player.hands.isEmpty else {
+            print("☣️ MISSING HAND ☢️"); return nil
+        }
+        return client.player.hands[0]
+    }
     weak var delegate: GameControllerDelegate?
 
     init(clients: Clients, delegate: GameControllerDelegate) {
@@ -38,6 +44,7 @@ class GameController {
         deck = Deck.standard()
         clearHands()
         delegate?.gameStarted(with: clients, gameController: self)
+        print("🏁 Game started")
         takeStake()
     }
 
@@ -54,30 +61,11 @@ class GameController {
             actions: [.stake],
             withType: .inProgress,
             onLoop: gameLoop
-        ).addAwaiter { [weak client, weak self] (result) in
-            guard let client = client, let self = self else { print("☢️ GAME OR CLIENT DEAD ☢️"); return }
-            guard result.result??.action == .stake, let value = result.result??.value else {
-                print("⚠️ BAD STAKE RESPONSE ⚠️"); return
-            }
-            print("💸 Staking \(value)p")
-            client.player.hands = [Hand(stake: value)]
-            try! client.request(
-                actions: [],
-                withType: .waiting,
-                onLoop: self.gameLoop
-            ).always {
-                self.turn += 1
-                if self.turn >= self.clients.count {
-                    self.takeTurn()
-                } else {
-                    self.takeStake()
-                }
-            }
-        }
+        ).addAwaiter(callback: gameAwaiter(result:))
     }
 
     private func takeTurn() {
-        let hand = client.player.hands[0]
+        guard let hand = hand else { print("☣️ MISSING HAND ☢️"); return }
         guard handStillInPlay(hand) else {
             print("⏩ Skipping \(client.player.username)")
             if roundFor(turn: turn + 1) > round && isGameOver() { // `roundFor`
@@ -88,7 +76,7 @@ class GameController {
                                                                  // nce a round.
                 completeGame()
             } else {
-                nextTurn()
+                wait()
             }
             return
         }
@@ -112,23 +100,31 @@ class GameController {
             actions: [.hit, .stand],
             withType: .inProgress,
             onLoop: gameLoop
-        ).addAwaiter(callback: { [weak self] (result) in
-            guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
-            guard let action = result.result??.action else { print("⚠️ BAD RESPONSE ⚠️"); return }
-            print("👌 Executing response instruction \(action.rawValue)")
-            switch action {
-            case .hit:
-                self.hit()
-            case .stand:
-                self.stand()
-            case .split, .double:
-                print("⚠️ UNSUPPORTED ACTION ⚠️"); fallthrough
-            case .stake:
-                print("⚠️ UNEXPECTED STAKE ⚠️"); fallthrough
-            default:
-                self.takeTurn()
+        ).addAwaiter(callback: gameAwaiter(result:))
+    }
+
+    private func gameAwaiter(result: FutureResult<PlayerResponse?>) {
+        weak var `self` = self
+        guard let action = result.result??.action else { print("⚠️ BAD RESPONSE ⚠️"); return }
+        print("👌 Executing response instruction \(action.rawValue)")
+        switch action {
+        case .hit:
+            guard let hand = self?.hand else { fallthrough }
+            self?.hit(hand: hand)
+        case .stand:
+            guard let hand = self?.hand else { fallthrough }
+            self?.stand(hand: hand)
+        case .stake:
+            if let value = result.result??.value {
+                self?.stake(amount: value)
+            } else {
+                self?.takeStake()
             }
-        })
+        case .split, .double:
+            print("⚠️ UNSUPPORTED ACTION ⚠️"); fallthrough
+        default:
+            self?.takeTurn()
+        }
     }
 
     private func completeGame() {
@@ -142,6 +138,7 @@ class GameController {
         }
         gameLoop.scheduleTask(in: TimeAmount.seconds(5)) { [weak self] in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
+            print("🎬 Game ended")
             self.clients.forEach({ _ = try! $0.request(
                 actions: [],
                 withType: .ended,
@@ -155,27 +152,58 @@ class GameController {
 
     // MARK: Actions
 
-    private func hit() {
-        let hand = client.player.hands[0]
+    // Setup
+
+    private func stake(amount: Int) {
+        print("💸 Staking \(amount)p")
+        #warning("Will need to change if we allow multiple hands.")
+        client.player.hands = [Hand(stake: amount)]
+        try! client.request(
+            actions: [],
+            withType: .waiting,
+            onLoop: self.gameLoop
+        ).always {
+            self.turn += 1
+            if self.turn >= self.clients.count {
+                self.takeTurn()
+            } else {
+                self.takeStake()
+            }
+        }
+    }
+
+    // Play
+
+    private func hit(hand: Hand) {
         hand.cards.append(self.deck.drawCard())
         try! client.request(
             actions: [],
             withType: hand.lowTotal > 21 ? .bust : .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
-            self?.nextTurn()
+            self?.takeTurn()
         }
     }
 
-    private func stand() {
-        let hand = client.player.hands[0]
-        hand.hasStood = true
+    private func stand(hand: Hand) {
+        hand.hasStood = true; #warning("Should this be a member of `Player`?")
         try! client.request(
             actions: [],
             withType: .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
             self?.nextTurn()
+        }
+    }
+
+    private func wait(causeBust bust: Bool = false) {
+        print("⏱ Telling client to wait")
+        try! client.request(
+            actions: [],
+            withType: bust ? .bust : .waiting,
+            onLoop: gameLoop
+        ).always {
+            self.nextTurn()
         }
     }
 
