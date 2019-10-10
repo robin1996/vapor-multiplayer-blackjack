@@ -14,35 +14,6 @@ protocol GameControllerDelegate: AnyObject {
 
 typealias Players = [Player]
 
-class Dealer: Player {
-
-    var model: PlayerModel
-
-    init() {
-        model = PlayerModel(username: "Dealer guy")
-    }
-
-    func request(
-        actions: [PlayerAction],
-        withType type: PlayerRequest.RequestType,
-        onLoop eventLoop: EventLoop
-    ) throws -> EventLoopFuture<PlayerResponse?> {
-        let promise = eventLoop.newPromise(of: PlayerResponse?.self)
-        switch (actions, hand?.bestTotal() ?? -1) {
-        case (.stake, _):
-            promise.succeed(result: PlayerResponse(action: .stake, value: -1))
-        case (.hit, ...17):
-            promise.succeed(result: PlayerResponse(action: .hit, value: nil))
-        case (.stand, _):
-            promise.succeed(result: PlayerResponse(action: .stand, value: 0))
-        default:
-            promise.succeed(result: nil)
-        }
-        return promise.futureResult
-    }
-
-}
-
 class GameController {
 
     private let gameLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
@@ -87,8 +58,8 @@ class GameController {
     // MARK: - GamePlay
 
     private func takeStake(fromPlayer player: Player) {
-        print("🤑 Requesting stake from \(currentPlayer.model.username)")
-        try! currentPlayer.request(
+        print("🤑 Requesting stake from \(player.model.username)")
+        try! player.request(
             actions: [.stake],
             withType: .inProgress,
             onLoop: gameLoop
@@ -198,7 +169,7 @@ class GameController {
         print("💸 Staking \(amount)p")
         #warning("Will need to change if we allow multiple hands.")
         player.model.hands = [Hand(stake: amount)]
-        try! currentPlayer.request(
+        try! player.request(
             actions: [],
             withType: .waiting,
             onLoop: self.gameLoop
