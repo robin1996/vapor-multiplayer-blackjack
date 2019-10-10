@@ -28,11 +28,14 @@ class Dealer: Player {
         onLoop eventLoop: EventLoop
     ) throws -> EventLoopFuture<PlayerResponse?> {
         let promise = eventLoop.newPromise(of: PlayerResponse?.self)
-        if actions.contains(.stand) {
-            promise.succeed(result: PlayerResponse(action: .stand, value: 0))
-        } else if actions.contains(.stake) {
+        switch (actions, hand?.bestTotal() ?? -1) {
+        case (.stake, _):
             promise.succeed(result: PlayerResponse(action: .stake, value: -1))
-        } else {
+        case (.hit, ...17):
+            promise.succeed(result: PlayerResponse(action: .hit, value: nil))
+        case (.stand, _):
+            promise.succeed(result: PlayerResponse(action: .stand, value: 0))
+        default:
             promise.succeed(result: nil)
         }
         return promise.futureResult
@@ -58,12 +61,7 @@ class GameController {
     private var currentPlayer: Player {
         return players[Int(turn % players.count)]
     }
-    private var hand: Hand? {
-        guard !currentPlayer.model.hands.isEmpty else {
-            print("☣️ MISSING HAND ☢️"); return nil
-        }
-        return currentPlayer.model.hands[0]
-    }
+
     weak var delegate: GameControllerDelegate?
 
     init(clients: Clients, delegate: GameControllerDelegate) {
@@ -97,7 +95,9 @@ class GameController {
     }
 
     private func takeTurn() {
-        guard let hand = hand else { print("☣️ MISSING HAND ☢️"); return }
+        guard let hand = currentPlayer.hand else {
+            print("☣️ MISSING HAND ☢️"); return
+        }
         guard handStillInPlay(hand) else {
             print("⏩ Skipping \(currentPlayer.model.username)")
             if roundFor(turn: turn + 1) > round && isGameOver() { // `roundFor`
@@ -141,10 +141,10 @@ class GameController {
         print("💪 Executing response instruction \(action.rawValue)")
         switch action {
         case .hit:
-            guard let hand = self?.hand else { fallthrough }
+            guard let hand = self?.currentPlayer.hand else { fallthrough }
             self?.hit(hand: hand)
         case .stand:
-            guard let hand = self?.hand else { fallthrough }
+            guard let hand = self?.currentPlayer.hand else { fallthrough }
             self?.stand(hand: hand)
         case .stake:
             if let value = result.result??.value {
@@ -163,8 +163,8 @@ class GameController {
         players.forEach { (client) in
             _ = try! client.request(
                 actions: [],
-                withType: hand!.beatsDealers(
-                    hand: dealer.model.hands[0]
+                withType: client.hand!.beatsDealers(
+                    hand: dealer.hand!
                 ) ? .win : .lose,
                 onLoop: self.gameLoop
             )
