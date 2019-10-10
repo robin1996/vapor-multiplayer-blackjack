@@ -75,7 +75,8 @@ class GameController {
         clearHands()
         delegate?.gameStarted(with: clients, gameController: self)
         print("🏁 Game started")
-        takeStake()
+        // Get stakes and set off game
+        players.forEach { takeStake(fromPlayer: $0) }
     }
 
     func end() {
@@ -85,13 +86,23 @@ class GameController {
 
     // MARK: - GamePlay
 
-    private func takeStake() {
+    private func takeStake(fromPlayer player: Player) {
         print("🤑 Requesting stake from \(currentPlayer.model.username)")
         try! currentPlayer.request(
             actions: [.stake],
             withType: .inProgress,
             onLoop: gameLoop
-        ).addAwaiter(callback: gameAwaiter(result:))
+        ).addAwaiter(callback: { [weak player, weak self] (result) in
+            guard let player = player else {
+                print("☢️ MISSING PLAYER ☢️"); return
+            }
+            guard let value = result.result??.value else {
+                print("🥺 Missing stake")
+                self?.takeStake(fromPlayer: player)
+                return
+            }
+            self?.stake(amount: value, forPlayer: player)
+        })
     }
 
     private func takeTurn() {
@@ -147,11 +158,7 @@ class GameController {
             guard let hand = self?.currentPlayer.hand else { fallthrough }
             self?.stand(hand: hand)
         case .stake:
-            if let value = result.result??.value {
-                self?.stake(amount: value)
-            } else {
-                self?.takeStake()
-            }
+            print("⚠️ UNSUPPORTED STAKE ⚠️"); fallthrough
         case .split, .double:
             print("⚠️ UNSUPPORTED ACTION ⚠️"); fallthrough
         default:
@@ -187,20 +194,17 @@ class GameController {
 
     // Setup
 
-    private func stake(amount: Int) {
+    private func stake(amount: Int, forPlayer player: Player) {
         print("💸 Staking \(amount)p")
         #warning("Will need to change if we allow multiple hands.")
-        currentPlayer.model.hands = [Hand(stake: amount)]
+        player.model.hands = [Hand(stake: amount)]
         try! currentPlayer.request(
             actions: [],
             withType: .waiting,
             onLoop: self.gameLoop
         ).always {
-            self.turn += 1
-            if self.turn >= self.players.count {
+            if self.allStakesMade() {
                 self.takeTurn()
-            } else {
-                self.takeStake()
             }
         }
     }
@@ -274,6 +278,16 @@ class GameController {
         players.forEach { (client) in
             client.model.hands = []
         }
+    }
+
+    /// Check that ever player has made a stake by making sure they have atleast
+    /// one hand.
+    ///
+    /// - Returns: True if every player has made a stake.
+    private func allStakesMade() -> Bool {
+        return players.reduce(true, { (allStaked, player) -> Bool in
+            return allStaked && player.hand != nil
+        })
     }
 
 }
