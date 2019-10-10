@@ -12,25 +12,51 @@ protocol GameControllerDelegate: AnyObject {
     func gameEnded(with clients: Clients, gameController: GameController)
 }
 
+typealias Players = [Player]
+
+class Dealer: Player {
+
+    var model: PlayerModel
+
+    init() {
+        model = PlayerModel(username: "Dealer guy")
+    }
+
+    func request(
+        actions: [PlayerAction],
+        withType type: PlayerRequest.RequestType,
+        onLoop eventLoop: EventLoop
+    ) throws -> EventLoopFuture<PlayerResponse?> {
+        let promise = eventLoop.newPromise(of: PlayerResponse?.self)
+        promise.succeed(result: nil)
+        return promise.futureResult
+    }
+
+}
+
 class GameController {
 
     private let gameLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
     private var deck: Deck = []
+    private var players: Players {
+        return clients + [dealer]
+    }
     private var clients: Clients
+    private let dealer = Dealer()
     private var turn = 0 {
         didSet {
             round = roundFor(turn: turn)
         }
     }
     private var round = 0
-    private var client: ClientController {
-        return clients[Int(turn % clients.count)]
+    private var currentPlayer: Player {
+        return players[Int(turn % players.count)]
     }
     private var hand: Hand? {
-        guard !client.player.hands.isEmpty else {
+        guard !currentPlayer.model.hands.isEmpty else {
             print("☣️ MISSING HAND ☢️"); return nil
         }
-        return client.player.hands[0]
+        return currentPlayer.model.hands[0]
     }
     weak var delegate: GameControllerDelegate?
 
@@ -56,8 +82,8 @@ class GameController {
     // MARK: - GamePlay
 
     private func takeStake() {
-        print("🤑 Requesting stake from \(client.player.username)")
-        try! client.request(
+        print("🤑 Requesting stake from \(currentPlayer.model.username)")
+        try! currentPlayer.request(
             actions: [.stake],
             withType: .inProgress,
             onLoop: gameLoop
@@ -67,7 +93,7 @@ class GameController {
     private func takeTurn() {
         guard let hand = hand else { print("☣️ MISSING HAND ☢️"); return }
         guard handStillInPlay(hand) else {
-            print("⏩ Skipping \(client.player.username)")
+            print("⏩ Skipping \(currentPlayer.model.username)")
             if roundFor(turn: turn + 1) > round && isGameOver() { // `roundFor`
                                                                  // stops `isGa-
                                                                  // meOver` from
@@ -81,9 +107,9 @@ class GameController {
             return
         }
         guard hand.cards.count >= 2 else {
-            print("🃏 Dealing to \(client.player.username)")
+            print("🃏 Dealing to \(currentPlayer.model.username)")
             hand.cards.append(self.deck.drawCard())
-            try! client.request(
+            try! currentPlayer.request(
                 actions: [],
                 withType: .waiting,
                 onLoop: gameLoop
@@ -95,8 +121,8 @@ class GameController {
             }
             return
         }
-        print("🤞 Requesting action from \(client.player.username)")
-        try! client.request(
+        print("🙏 Requesting action from \(currentPlayer.model.username)")
+        try! currentPlayer.request(
             actions: [.hit, .stand],
             withType: .inProgress,
             onLoop: gameLoop
@@ -106,7 +132,7 @@ class GameController {
     private func gameAwaiter(result: FutureResult<PlayerResponse?>) {
         weak var `self` = self
         guard let action = result.result??.action else { print("⚠️ BAD RESPONSE ⚠️"); return }
-        print("👌 Executing response instruction \(action.rawValue)")
+        print("💪 Executing response instruction \(action.rawValue)")
         switch action {
         case .hit:
             guard let hand = self?.hand else { fallthrough }
@@ -128,8 +154,8 @@ class GameController {
     }
 
     private func completeGame() {
-        clients.forEach { (client) in
-            let hand = client.player.hands[0]
+        players.forEach { (client) in
+            let hand = client.model.hands[0]
             _ = try! client.request(
                 actions: [],
                 withType: hand.lowTotal <= 21 ? .win : .lose,
@@ -139,7 +165,7 @@ class GameController {
         gameLoop.scheduleTask(in: TimeAmount.seconds(5)) { [weak self] in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
             print("🎬 Game ended")
-            self.clients.forEach({ _ = try! $0.request(
+            self.players.forEach({ _ = try! $0.request(
                 actions: [],
                 withType: .ended,
                 onLoop: self.gameLoop
@@ -157,14 +183,14 @@ class GameController {
     private func stake(amount: Int) {
         print("💸 Staking \(amount)p")
         #warning("Will need to change if we allow multiple hands.")
-        client.player.hands = [Hand(stake: amount)]
-        try! client.request(
+        currentPlayer.model.hands = [Hand(stake: amount)]
+        try! currentPlayer.request(
             actions: [],
             withType: .waiting,
             onLoop: self.gameLoop
         ).always {
             self.turn += 1
-            if self.turn >= self.clients.count {
+            if self.turn >= self.players.count {
                 self.takeTurn()
             } else {
                 self.takeStake()
@@ -176,7 +202,7 @@ class GameController {
 
     private func hit(hand: Hand) {
         hand.cards.append(self.deck.drawCard())
-        try! client.request(
+        try! currentPlayer.request(
             actions: [],
             withType: hand.lowTotal > 21 ? .bust : .waiting,
             onLoop: gameLoop
@@ -187,7 +213,7 @@ class GameController {
 
     private func stand(hand: Hand) {
         hand.hasStood = true; #warning("Should this be a member of `Player`?")
-        try! client.request(
+        try! currentPlayer.request(
             actions: [],
             withType: .waiting,
             onLoop: gameLoop
@@ -198,7 +224,7 @@ class GameController {
 
     private func wait(causeBust bust: Bool = false) {
         print("⏱ Telling client to wait")
-        try! client.request(
+        try! currentPlayer.request(
             actions: [],
             withType: bust ? .bust : .waiting,
             onLoop: gameLoop
@@ -226,20 +252,20 @@ class GameController {
     ///
     /// - Returns: True if the game is over.
     private func isGameOver() -> Bool {
-        return !clients.reduce(false) { (inPlay, client) -> Bool in
-            inPlay || client.player.hands.reduce(false, { (inPlay, hand) -> Bool in
+        return !players.reduce(false) { (inPlay, client) -> Bool in
+            inPlay || client.model.hands.reduce(false, { (inPlay, hand) -> Bool in
                 inPlay || self.handStillInPlay(hand)
             })
         }
     }
 
     private func roundFor(turn: Int) -> Int {
-        return Int(floor(Double(turn) / Double(clients.count)))
+        return Int(floor(Double(turn) / Double(players.count)))
     }
 
     private func clearHands() {
-        clients.forEach { (client) in
-            client.player.hands = []
+        players.forEach { (client) in
+            client.model.hands = []
         }
     }
 

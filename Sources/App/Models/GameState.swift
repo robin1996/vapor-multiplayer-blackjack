@@ -130,7 +130,7 @@ class Hand: Encodable {
     }
 }
 
-class Player: Encodable {
+class PlayerModel: Encodable {
     let username: String
     var hands: [Hand] = []
     var insurance: Int = 0
@@ -167,5 +167,5 @@ struct PlayerRequest: Encodable {
 
     let actions: [PlayerAction]
     let type: RequestType
-    let player: Player
+    let player: PlayerModel
 }

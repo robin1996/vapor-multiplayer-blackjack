@@ -63,7 +63,7 @@ extension ClientPoolController: GameControllerDelegate {
 
     private func nameList(of clients: Clients) -> String {
         return clients.reduce("") { (string, client) -> String in
-            "\(string) \(["🤩", "🤯", "🥳", "😎"][Int.random(in: 0...3)]) \(client.player.username) "
+            "\(string) \(["🤩", "🤯", "🥳", "😎"][Int.random(in: 0...3)]) \(client.model.username) "
         }
     }
 

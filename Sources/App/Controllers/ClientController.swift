@@ -11,14 +11,14 @@ enum PlayerRequestError: Error {
     case missingSocket
 }
 
-class ClientController {
+class ClientController: Player {
 
     weak var socket: WebSocket?
-    var player: Player
+    var model: PlayerModel
 
     init(socket: WebSocket, username: String) {
         self.socket = socket
-        self.player = Player(username: username)
+        self.model = PlayerModel(username: username)
     }
 
     func request(
@@ -27,7 +27,7 @@ class ClientController {
         onLoop eventLoop: EventLoop
     ) throws -> Future<PlayerResponse?> {
         // Create request
-        let request = PlayerRequest(actions: actions, type: type, player: player)
+        let request = PlayerRequest(actions: actions, type: type, player: model)
         let data = try BlackjackEncoder().encode(request)
         guard let socket = socket else {
             throw PlayerRequestError.missingSocket
