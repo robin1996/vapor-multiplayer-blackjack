@@ -80,13 +80,9 @@ struct Card: Encodable {
     }
 }
 
-class Hand: Encodable {
+class Hand {
     enum TotalType: String, Codable {
         case hard, soft
-    }
-
-    enum CodingKeys: String, CodingKey {
-        case cards, totalType, stake, winnings, total
     }
 
     var cards: [Card] = []
@@ -94,30 +90,49 @@ class Hand: Encodable {
     var stake: Int
     var winnings: Int = 0
     var hasStood = false // Shouldn't be encoded
-    var total: String {
-        let lowTotal = self.lowTotal
-        let hightTotal = cards.sum { (card) -> Int in
-            card.highValue
-        }
-        if hightTotal == 21 && cards.count == 2 {
-            return "Blackjack"
-        }
-        if hightTotal > 21 {
-            return "\(lowTotal)"
-        }
-        if hightTotal != lowTotal {
-            return "\(lowTotal)/\(hightTotal)"
-        }
-        return "\(hightTotal)"
-    }
-    var lowTotal: Int {
-        return cards.sum({ (card) -> Int in
-            card.lowValue
-        })
-    }
 
     init(stake: Int) {
         self.stake = stake
+    }
+
+    func lowTotal() -> Int {
+        return cards.sum { (card) -> Int in
+            card.lowValue
+        }
+    }
+
+    func highTotal() -> Int {
+        return cards.sum { (card) -> Int in
+            card.highValue
+        }
+    }
+
+    func total() -> (low: Int, high: Int) {
+        return (low: lowTotal(), high: highTotal())
+    }
+
+    func bestTotal() -> Int {
+        let total = self.total()
+        return total.high <= 21 ? total.high : total.low
+    }
+
+    func beatsDealers(hand: Hand) -> Bool {
+        let total = self.bestTotal()
+        let dealerTotal = hand.bestTotal()
+        guard total <= 21 else {
+            return false
+        }
+        if dealerTotal > 21 || (total == 21 && hand.cards.count > 2 && cards.count == 2) {
+            return true
+        }
+        return total > dealerTotal
+    }
+
+}
+
+extension Hand: Encodable {
+    enum CodingKeys: String, CodingKey {
+        case cards, totalType, stake, winnings, total
     }
 
     func encode(to encoder: Encoder) throws {
@@ -126,7 +141,18 @@ class Hand: Encodable {
         try container.encode(totalType, forKey: .totalType)
         try container.encode(stake, forKey: .stake)
         try container.encode(winnings, forKey: .winnings)
-        try container.encode(total, forKey: .total)
+        var totalString = ""
+        let total = self.total()
+        switch total.high {
+        case 21:
+            guard cards.count == 2 else { fallthrough }
+            totalString = "Blackjack"
+        case ...21:
+            totalString = "\(total.low != total.high ? "\(total.low)/" : "")\(total.high)"
+        default:
+            totalString = "\(total.low)"
+        }
+        try container.encode(totalString, forKey: .total)
     }
 }
 

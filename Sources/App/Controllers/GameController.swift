@@ -28,7 +28,13 @@ class Dealer: Player {
         onLoop eventLoop: EventLoop
     ) throws -> EventLoopFuture<PlayerResponse?> {
         let promise = eventLoop.newPromise(of: PlayerResponse?.self)
-        promise.succeed(result: nil)
+        if actions.contains(.stand) {
+            promise.succeed(result: PlayerResponse(action: .stand, value: 0))
+        } else if actions.contains(.stake) {
+            promise.succeed(result: PlayerResponse(action: .stake, value: -1))
+        } else {
+            promise.succeed(result: nil)
+        }
         return promise.futureResult
     }
 
@@ -155,10 +161,11 @@ class GameController {
 
     private func completeGame() {
         players.forEach { (client) in
-            let hand = client.model.hands[0]
             _ = try! client.request(
                 actions: [],
-                withType: hand.lowTotal <= 21 ? .win : .lose,
+                withType: hand!.beatsDealers(
+                    hand: dealer.model.hands[0]
+                ) ? .win : .lose,
                 onLoop: self.gameLoop
             )
         }
@@ -204,7 +211,7 @@ class GameController {
         hand.cards.append(self.deck.drawCard())
         try! currentPlayer.request(
             actions: [],
-            withType: hand.lowTotal > 21 ? .bust : .waiting,
+            withType: hand.lowTotal() > 21 ? .bust : .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
             self?.takeTurn()
@@ -245,7 +252,7 @@ class GameController {
     /// - Parameter hand: Hand to check.
     /// - Returns: True if the hand is still in play.
     private func handStillInPlay(_ hand: Hand) -> Bool {
-        return hand.lowTotal < 21 && !hand.hasStood
+        return hand.lowTotal() < 21 && !hand.hasStood
     }
 
     /// Checks if the game is over.
