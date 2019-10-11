@@ -173,7 +173,6 @@ class PlayerModel: Encodable {
 
 struct GameState: Encodable {
     var players: [PlayerModel]
-    var currentPlayer: PlayerModel?
     var dealer: PlayerModel
 }
 

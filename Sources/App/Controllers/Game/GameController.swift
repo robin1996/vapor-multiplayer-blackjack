@@ -7,11 +7,6 @@
 
 import Vapor
 
-protocol GameControllerDelegate: AnyObject {
-    func gameStarted(with clients: Clients, gameController: GameController)
-    func gameEnded(with clients: Clients, gameController: GameController)
-}
-
 typealias Players = [Player]
 
 class GameController {
@@ -21,7 +16,7 @@ class GameController {
     private var players: Players {
         return clients + [dealer]
     }
-    private var clients: Clients
+    private var clients: Clients = []
     private let dealer = Dealer()
     private var turn = 0 {
         didSet {
@@ -32,16 +27,14 @@ class GameController {
 
     weak var delegate: GameControllerDelegate?
 
-    init(clients: Clients, delegate: GameControllerDelegate) {
-        self.clients = clients
-        self.delegate = delegate
-    }
-
-    func start() {
+    func start(withClients clients: Clients? = nil) {
+        if let clients = clients {
+            self.clients = clients
+        }
         turn = 0
         deck = Deck.standard()
         clearHands()
-        delegate?.gameStarted(with: clients, gameController: self)
+        delegate?.gameStarted(with: self.clients, gameController: self)
         print("🏁 Game started")
         // Get stakes and set off game
         players.forEach { takeStake(fromPlayer: $0) }
