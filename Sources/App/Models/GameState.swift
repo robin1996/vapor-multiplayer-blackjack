@@ -171,11 +171,11 @@ class PlayerModel: Encodable {
     }
 }
 
-//struct GameState: Encodable {
-//    var players: [Player]
-//    var currentPlayer: Player
-//    var dealer: Player
-//}
+struct GameState: Encodable {
+    var players: [PlayerModel]
+    var currentPlayer: PlayerModel?
+    var dealer: PlayerModel
+}
 
 enum PlayerAction: String, Codable {
     case hit, stand, double, split, stake
