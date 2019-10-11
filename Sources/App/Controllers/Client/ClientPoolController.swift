@@ -42,6 +42,10 @@ class ClientPoolController {
         webSocket.onCloseCode { [weak self] (_) in
             self?.remove(webSocket: webSocket)
         }
+        webSocket.onClose.always { [weak self, weak webSocket] in
+            guard let socket = webSocket else { return }
+            self?.remove(webSocket: socket)
+        }
         webSocket.onError { [weak self] (webSocket, _) in
             self?.remove(webSocket: webSocket)
         }
