@@ -267,14 +267,14 @@ class GameController {
          return players[Int(turn % players.count)]
     }
 
-    private func getGameState() -> GameState {
+    private func updateCaster() {
+        broadcaster?.cast(state: getGameState())
+    }
+
+    func getGameState() -> GameState {
         return GameState(players: clients.map({ (client) -> PlayerModel in
             client.model
         }), dealer: dealer.model)
-    }
-
-    private func updateCaster() {
-        broadcaster?.cast(state: getGameState())
     }
 
 }

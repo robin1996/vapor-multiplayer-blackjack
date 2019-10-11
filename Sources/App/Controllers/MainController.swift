@@ -16,6 +16,7 @@ class MainController {
     init() {
         gameController.delegate = self
         gameController.broadcaster = casterPool
+        casterPool.delegate = self
         clientPool.delegate = self
     }
 
@@ -55,6 +56,15 @@ extension MainController: ClientPoolDelegate {
     func clientConnected(_ client: ClientController) {
         gameController.end()
         gameController.start(withClients: clientPool.clients)
+    }
+
+}
+
+extension MainController: CasterPoolDelegate {
+
+    func casterConnected(_ socket: WebSocket) {
+        let data = try! BlackjackEncoder().encode(gameController.getGameState())
+        socket.send(data)
     }
 
 }

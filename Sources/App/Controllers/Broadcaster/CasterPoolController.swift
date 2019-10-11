@@ -27,9 +27,11 @@ class CasterPoolController {
         }
         return array
     }
+    weak var delegate: CasterPoolDelegate?
 
     func setup(webSocket: WebSocket) {
         _casters[ObjectIdentifier(webSocket)] = Caster(socket: webSocket)
+        delegate?.casterConnected(webSocket)
     }
 
 }
