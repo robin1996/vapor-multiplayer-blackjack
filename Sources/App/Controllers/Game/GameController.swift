@@ -145,9 +145,10 @@ class GameController {
         players.forEach { (client) in
             _ = try! client.request(
                 actions: [],
-                withType: client.hand!.beatsDealers(
-                    hand: dealer.hand!
-                ) ? .win : .lose,
+                withType: client.hand?.lowTotal() ?? 0 > 21 ?
+                    .bust : client.hand!.beatsDealers(
+                        hand: dealer.hand!
+                    ) ? .win : .lose,
                 onLoop: self.gameLoop
             )
         }
