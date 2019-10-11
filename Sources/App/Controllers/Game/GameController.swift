@@ -26,6 +26,7 @@ class GameController {
     private var round = 0
 
     weak var delegate: GameControllerDelegate?
+    weak var broadcaster: Broadcaster?
 
     func start(withClients clients: Clients? = nil) {
         if let clients = clients {
@@ -36,6 +37,7 @@ class GameController {
         clearHands()
         delegate?.gameStarted(with: self.clients, gameController: self)
         print("🏁 Game started")
+        updateCaster()
         // Get stakes and set off game
         players.forEach { takeStake(fromPlayer: $0) }
     }
@@ -172,6 +174,7 @@ class GameController {
             withType: .waiting,
             onLoop: self.gameLoop
         ).always {
+            self.updateCaster()
             if self.allStakesMade() {
                 self.takeTurn()
             }
@@ -187,6 +190,7 @@ class GameController {
             withType: player.hand?.lowTotal() ?? 0 > 21 ? .bust : .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
+            self?.updateCaster()
             self?.takeTurn()
         }
     }
@@ -261,6 +265,16 @@ class GameController {
 
     private func player(forTurn turn: Int) -> Player {
          return players[Int(turn % players.count)]
+    }
+
+    private func getGameState() -> GameState {
+        return GameState(players: clients.map({ (client) -> PlayerModel in
+            client.model
+        }), dealer: dealer.model)
+    }
+
+    private func updateCaster() {
+        broadcaster?.cast(state: getGameState())
     }
 
 }

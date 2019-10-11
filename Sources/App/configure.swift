@@ -13,7 +13,6 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     let controller = MainController()
     wss.get("player", String.parameter) { ws, req in
         let name = try req.parameters.next(String.self)
-        ws.send("Hello \(name)")
         controller.clientPool.setup(webSocket: ws, withName: name)
     }
     wss.get("caster") { (ws, _) in

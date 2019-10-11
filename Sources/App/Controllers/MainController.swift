@@ -15,6 +15,7 @@ class MainController {
 
     init() {
         gameController.delegate = self
+        gameController.broadcaster = casterPool
         clientPool.delegate = self
     }
 

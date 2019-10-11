@@ -33,3 +33,14 @@ class CasterPoolController {
     }
 
 }
+
+extension CasterPoolController: Broadcaster {
+
+    func cast(state: GameState) {
+        let data = try! BlackjackEncoder().encode(state)
+        casters.forEach { (socket) in
+            socket.send(data)
+        }
+    }
+
+}
