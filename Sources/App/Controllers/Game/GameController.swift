@@ -16,7 +16,7 @@ class GameController {
     private var players: Players {
         return clients + [dealer]
     }
-    private var clients: Clients = []
+    private(set) var clients: Clients = []
     private let dealer = Dealer()
     private var turn = 0 {
         didSet {

@@ -9,4 +9,5 @@ import Foundation
 
 protocol ClientPoolDelegate: AnyObject {
     func clientConnected(_ client: ClientController)
+    func clientDisconnected(_ client: ClientController?)
 }

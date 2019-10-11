@@ -39,20 +39,22 @@ class ClientPoolController {
         webSocket.onText { [weak self] (_, text) in
             self?.sendGlobal(message: text)
         }
-//        webSocket.onCloseCode { [weak self] (_) in
-//            self?.remove(webSocket: webSocket)
-//        }
-//        webSocket.onError { [weak self] (webSocket, _) in
-//            self?.remove(webSocket: webSocket)
-//        }
+        webSocket.onCloseCode { [weak self] (_) in
+            self?.remove(webSocket: webSocket)
+        }
+        webSocket.onError { [weak self] (webSocket, _) in
+            self?.remove(webSocket: webSocket)
+        }
         sendGlobal(message: "New client joined!")
         delegate?.clientConnected(client)
     }
 
-//    func remove(webSocket: WebSocket) {
-//        _clients.removeValue(forKey: ObjectIdentifier(webSocket))
-//        print("Client disconnected.")
-//        sendGlobal(message: "Client diconnected.")
-//    }
+    func remove(webSocket: WebSocket) {
+        let id = ObjectIdentifier(webSocket)
+        let client = _clients[id]
+        _clients.removeValue(forKey: id)
+        sendGlobal(message: "Client diconnected")
+        delegate?.clientDisconnected(client)
+    }
 
 }

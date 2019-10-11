@@ -40,6 +40,17 @@ extension MainController: GameControllerDelegate {
 
 extension MainController: ClientPoolDelegate {
 
+    func clientDisconnected(_ client: ClientController?) {
+        if gameController.clients.contains(where: { (c) -> Bool in
+            c === client
+        }) {
+            gameController.end()
+        }
+        clientPool.sendGlobal(
+            message: "\(client?.model.username ?? "Client") disconnected"
+        )
+    }
+
     func clientConnected(_ client: ClientController) {
         gameController.end()
         gameController.start(withClients: clientPool.clients)
