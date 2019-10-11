@@ -29,9 +29,6 @@ class GameController {
         }
     }
     private var round = 0
-    private var currentPlayer: Player {
-        return players[Int(turn % players.count)]
-    }
 
     weak var delegate: GameControllerDelegate?
 
@@ -77,6 +74,7 @@ class GameController {
     }
 
     private func takeTurn() {
+        let currentPlayer = player(forTurn: turn)
         guard let hand = currentPlayer.hand else {
             print("☣️ MISSING HAND ☢️"); return
         }
@@ -90,7 +88,10 @@ class GameController {
                                                                  // nce a round.
                 completeGame()
             } else {
-                wait()
+                wait(
+                    currentPlayer,
+                    causeBust: currentPlayer.hand?.bestTotal() ?? 0 > 21
+                )
             }
             return
         }
@@ -119,15 +120,18 @@ class GameController {
 
     private func gameAwaiter(result: FutureResult<PlayerResponse?>) {
         weak var `self` = self
-        guard let action = result.result??.action else { print("⚠️ BAD RESPONSE ⚠️"); return }
+        guard let currentPlayer = self?.player(forTurn: turn) else {
+            print("☢️ GAME DEAD ☢️"); return
+        }
+        guard let action = result.result??.action else {
+            print("⚠️ BAD RESPONSE ⚠️"); self?.takeTurn(); return
+        }
         print("💪 Executing response instruction \(action.rawValue)")
         switch action {
         case .hit:
-            guard let hand = self?.currentPlayer.hand else { fallthrough }
-            self?.hit(hand: hand)
+            self?.hit(currentPlayer)
         case .stand:
-            guard let hand = self?.currentPlayer.hand else { fallthrough }
-            self?.stand(hand: hand)
+            self?.stand(currentPlayer)
         case .stake:
             print("⚠️ UNSUPPORTED STAKE ⚠️"); fallthrough
         case .split, .double:
@@ -182,20 +186,20 @@ class GameController {
 
     // Play
 
-    private func hit(hand: Hand) {
-        hand.cards.append(self.deck.drawCard())
-        try! currentPlayer.request(
+    private func hit(_ player: Player) {
+        player.hand?.cards.append(self.deck.drawCard())
+        try! player.request(
             actions: [],
-            withType: hand.lowTotal() > 21 ? .bust : .waiting,
+            withType: player.hand?.lowTotal() ?? 0 > 21 ? .bust : .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
             self?.takeTurn()
         }
     }
 
-    private func stand(hand: Hand) {
-        hand.hasStood = true; #warning("Should this be a member of `Player`?")
-        try! currentPlayer.request(
+    private func stand(_ player: Player) {
+        player.hand?.hasStood = true; #warning("Should this be a member of `Player`?")
+        try! player.request(
             actions: [],
             withType: .waiting,
             onLoop: gameLoop
@@ -204,9 +208,9 @@ class GameController {
         }
     }
 
-    private func wait(causeBust bust: Bool = false) {
-        print("⏱ Telling client to wait")
-        try! currentPlayer.request(
+    private func wait(_ player: Player, causeBust bust: Bool = false) {
+        print("⏱ Telling \(player.model.username) to wait")
+        try! player.request(
             actions: [],
             withType: bust ? .bust : .waiting,
             onLoop: gameLoop
@@ -259,6 +263,10 @@ class GameController {
         return players.reduce(true, { (allStaked, player) -> Bool in
             return allStaked && player.hand != nil
         })
+    }
+
+    private func player(forTurn turn: Int) -> Player {
+         return players[Int(turn % players.count)]
     }
 
 }
