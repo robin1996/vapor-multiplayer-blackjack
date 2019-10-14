@@ -51,9 +51,9 @@ class GameController {
 
     private func takeStake(fromPlayer player: Player) {
         print("🤑 Requesting stake from \(player.model.username)")
+        player.model.status = .inProgress
         try! player.request(
             actions: [.stake],
-            withType: .inProgress,
             onLoop: gameLoop
         ).addAwaiter(callback: { [weak player, weak self] (result) in
             guard let player = player else {
@@ -93,22 +93,23 @@ class GameController {
         guard hand.cards.count >= 2 else {
             print("🃏 Dealing to \(currentPlayer.model.username)")
             hand.cards.append(self.deck.drawCard())
+            currentPlayer.model.status = .waiting
             try! currentPlayer.request(
                 actions: [],
-                withType: .waiting,
                 onLoop: gameLoop
             ).always {
+                self.updateCaster()
                 // Artificial delay
-                self.gameLoop.scheduleTask(in: TimeAmount.seconds(1)) {
-                    self.nextTurn()
+                self.gameLoop.scheduleTask(in: TimeAmount.seconds(1)) { [weak self] in
+                    self?.nextTurn()
                 }
             }
             return
         }
         print("🙏 Requesting action from \(currentPlayer.model.username)")
+        currentPlayer.model.status = .inProgress
         try! currentPlayer.request(
             actions: [.hit, .stand],
-            withType: .inProgress,
             onLoop: gameLoop
         ).addAwaiter(callback: gameAwaiter(result:))
     }
@@ -137,24 +138,26 @@ class GameController {
     }
 
     private func completeGame() {
-        players.forEach { (client) in
-            _ = try! client.request(
+        players.forEach { (player) in
+            player.model.status = player.hand?.lowTotal() ?? 0 > 21 ?
+                .bust : player.hand!.beatsDealers(
+                    hand: dealer.hand!
+                ) ? .win : .lose
+            _ = try! player.request(
                 actions: [],
-                withType: client.hand?.lowTotal() ?? 0 > 21 ?
-                    .bust : client.hand!.beatsDealers(
-                        hand: dealer.hand!
-                    ) ? .win : .lose,
                 onLoop: self.gameLoop
             )
         }
         gameLoop.scheduleTask(in: TimeAmount.seconds(5)) { [weak self] in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
             print("🎬 Game ended")
-            self.players.forEach({ _ = try! $0.request(
-                actions: [],
-                withType: .ended,
-                onLoop: self.gameLoop
-            ) })
+            self.players.forEach({
+                $0.model.status = .ended
+                _ = try! $0.request(
+                    actions: [],
+                    onLoop: self.gameLoop
+                )
+            })
             self.gameLoop.scheduleTask(in: TimeAmount.seconds(2)) { [weak self] in
                 self?.start()
             }
@@ -169,9 +172,9 @@ class GameController {
         print("💸 Staking \(amount)p")
         #warning("Will need to change if we allow multiple hands.")
         player.model.hands = [Hand(stake: amount)]
+        player.model.status = .waiting
         try! player.request(
             actions: [],
-            withType: .waiting,
             onLoop: self.gameLoop
         ).always {
             self.updateCaster()
@@ -185,9 +188,9 @@ class GameController {
 
     private func hit(_ player: Player) {
         player.hand?.cards.append(self.deck.drawCard())
+        player.model.status = player.hand?.lowTotal() ?? 0 > 21 ? .bust : .waiting
         try! player.request(
             actions: [],
-            withType: player.hand?.lowTotal() ?? 0 > 21 ? .bust : .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
             self?.updateCaster()
@@ -197,9 +200,9 @@ class GameController {
 
     private func stand(_ player: Player) {
         player.hand?.hasStood = true; #warning("Should this be a member of `Player`?")
+        player.model.status = .waiting
         try! player.request(
             actions: [],
-            withType: .waiting,
             onLoop: gameLoop
         ).always { [weak self] in
             self?.nextTurn()
@@ -208,9 +211,9 @@ class GameController {
 
     private func wait(_ player: Player, causeBust bust: Bool = false) {
         print("⏱ Telling \(player.model.username) to wait")
+        player.model.status = bust ? .bust : .waiting
         try! player.request(
             actions: [],
-            withType: bust ? .bust : .waiting,
             onLoop: gameLoop
         ).always {
             self.nextTurn()

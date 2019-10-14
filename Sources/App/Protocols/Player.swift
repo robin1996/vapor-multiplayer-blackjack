@@ -10,7 +10,7 @@ import Vapor
 protocol Player: AnyObject {
     var model: PlayerModel { get set }
     var hand: Hand? { get }
-    func request(actions: [PlayerAction], withType type: PlayerRequest.RequestType, onLoop eventLoop: EventLoop) throws -> Future<PlayerResponse?>
+    func request(actions: [PlayerAction], onLoop eventLoop: EventLoop) throws -> Future<PlayerResponse?>
 }
 
 extension Player {

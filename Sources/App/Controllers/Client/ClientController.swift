@@ -23,11 +23,10 @@ class ClientController: Player {
 
     func request(
         actions: [PlayerAction],
-        withType type: PlayerRequest.RequestType,
         onLoop eventLoop: EventLoop
     ) throws -> Future<PlayerResponse?> {
         // Create request
-        let request = PlayerRequest(actions: actions, type: type, player: model)
+        let request = PlayerRequest(actions: actions, player: model)
         let data = try BlackjackEncoder().encode(request)
         guard let socket = socket else {
             throw PlayerRequestError.missingSocket

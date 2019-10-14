@@ -157,7 +157,12 @@ extension Hand: Encodable {
 }
 
 class PlayerModel: Encodable {
+    enum PlayerStatus: String, Codable {
+        case waiting, ended, inProgress, bust, win, lose
+    }
+
     let username: String
+    var status = PlayerStatus.waiting
     var hands: [Hand] = []
     var insurance: Int = 0
     var winnings: Int {
@@ -186,11 +191,6 @@ struct PlayerResponse: Decodable {
 }
 
 struct PlayerRequest: Encodable {
-    enum RequestType: String, Codable {
-        case waiting, ended, inProgress, bust, win, lose
-    }
-
     let actions: [PlayerAction]
-    let type: RequestType
     let player: PlayerModel
 }

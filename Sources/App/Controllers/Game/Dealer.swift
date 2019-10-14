@@ -17,7 +17,6 @@ class Dealer: Player {
 
     func request(
         actions: [PlayerAction],
-        withType type: PlayerRequest.RequestType,
         onLoop eventLoop: EventLoop
     ) throws -> EventLoopFuture<PlayerResponse?> {
         let promise = eventLoop.newPromise(of: PlayerResponse?.self)
