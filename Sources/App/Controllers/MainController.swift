@@ -36,6 +36,7 @@ extension MainController: GameControllerDelegate {
 
     func gameEnded(with clients: Clients, gameController: GameController) {
         clientPool.sendGlobal(message: "Game ended with \(nameList(of: clients))")
+        gameController.start(withClients: clientPool.clients)
     }
 
 }
@@ -48,9 +49,6 @@ extension MainController: ClientPoolDelegate {
         }) {
             gameController.end()
         }
-        clientPool.sendGlobal(
-            message: "\(client?.model.username ?? "Client") disconnected"
-        )
     }
 
     func clientConnected(_ client: ClientController) {

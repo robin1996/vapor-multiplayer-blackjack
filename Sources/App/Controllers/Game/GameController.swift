@@ -43,7 +43,6 @@ class GameController {
     }
 
     func end() {
-        try! gameLoop.close()
         delegate?.gameEnded(with: clients, gameController: self)
     }
 

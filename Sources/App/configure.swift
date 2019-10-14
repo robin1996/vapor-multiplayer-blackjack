@@ -18,7 +18,10 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
 
     // Commands
     var commandConfig = CommandConfig.default()
-    commandConfig.use(State(mainController: controller), as: "state")
+    commandConfig.use(GetState(mainController: controller), as: "state")
+    commandConfig.use(GetCasters(mainController: controller), as: "casters")
+    commandConfig.use(GetClients(mainController: controller), as: "clients")
+    commandConfig.use(KillGame(mainController: controller), as: "kill")
     services.register(commandConfig)
 
 }

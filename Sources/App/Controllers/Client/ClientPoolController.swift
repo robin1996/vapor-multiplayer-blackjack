@@ -57,7 +57,7 @@ class ClientPoolController {
         let id = ObjectIdentifier(webSocket)
         let client = _clients[id]
         _clients.removeValue(forKey: id)
-        sendGlobal(message: "Client diconnected")
+        sendGlobal(message: "\(client?.model.username ?? "Client") diconnected")
         delegate?.clientDisconnected(client)
     }
 

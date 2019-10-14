@@ -1,5 +1,5 @@
 //
-//  State.swift
+//  KillGame.swift
 //  App
 //
 //  Created by Robin Douglas on 14/10/2019.
@@ -7,7 +7,7 @@
 
 import Command
 
-struct State: Command {
+struct KillGame: Command {
 
     weak var mainController: MainController?
     var arguments: [CommandArgument] {
@@ -17,7 +17,7 @@ struct State: Command {
         return []
     }
     var help: [String] {
-        return ["Gets the current game state."]
+        return ["Ends the current game."]
     }
 
     init(mainController: MainController) {
@@ -25,12 +25,8 @@ struct State: Command {
     }
 
     func run(using context: CommandContext) throws -> EventLoopFuture<Void> {
-        var result = "No game 🥺"
-        if let data = try? BlackjackEncoder().encode(mainController?.gameController.getGameState()),
-            let string = String(data: data, encoding: .utf8) {
-            result = string
-        }
-        context.console.print(result)
+        mainController?.gameController.end()
+        context.console.print("Done 👍")
         return .done(on: context.container)
     }
 
