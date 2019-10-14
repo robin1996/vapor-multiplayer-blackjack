@@ -68,6 +68,9 @@ class GameController {
     }
 
     private func takeTurn() {
+        defer {
+            updateCaster()
+        }
         let currentPlayer = player(forTurn: turn)
         guard let hand = currentPlayer.hand else {
             print("☣️ MISSING HAND ☢️"); return
@@ -97,7 +100,6 @@ class GameController {
                 actions: [],
                 onLoop: gameLoop
             ).always {
-                self.updateCaster()
                 // Artificial delay
                 self.gameLoop.scheduleTask(in: TimeAmount.seconds(1)) { [weak self] in
                     self?.nextTurn()

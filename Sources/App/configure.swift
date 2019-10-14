@@ -1,10 +1,10 @@
-import FluentSQLite
 import Vapor
+import Leaf
 
 /// Called before your application initializes.
 public func configure(_ config: inout Config, _ env: inout Environment, _ services: inout Services) throws {
 
-    // WebSockets
+    // MARK: WebSockets
     let wss = NIOWebSocketServer.default()
     let controller = MainController()
     wss.get("player", String.parameter) { ws, req in
@@ -16,12 +16,13 @@ public func configure(_ config: inout Config, _ env: inout Environment, _ servic
     }
     services.register(wss, as: WebSocketServer.self)
 
-    // Commands
-    var commandConfig = CommandConfig.default()
-    commandConfig.use(GetState(mainController: controller), as: "state")
-    commandConfig.use(GetCasters(mainController: controller), as: "casters")
-    commandConfig.use(GetClients(mainController: controller), as: "clients")
-    commandConfig.use(KillGame(mainController: controller), as: "kill")
-    services.register(commandConfig)
+    // MARK: Leaf
+    try services.register(LeafProvider())
+    config.prefer(LeafRenderer.self, for: ViewRenderer.self)
+
+    // MARK: Router
+    let router = EngineRouter.default()
+    try controller.routes(router)
+    services.register(router, as: Router.self)
 
 }

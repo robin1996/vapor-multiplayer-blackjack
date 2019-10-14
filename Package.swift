@@ -4,19 +4,18 @@ import PackageDescription
 let package = Package(
     name: "./Multiplayer-Blackjack",
     products: [
-        .library(name: "./Multiplayer-Blackjack", targets: ["App"]),
+        .library(name: "./Multiplayer-Blackjack", targets: ["App"])
     ],
     dependencies: [
         // 💧 A server-side Swift web framework.
         .package(url: "https://github.com/vapor/vapor.git", from: "3.0.0"),
 
-        /// 💻 APIs for creating interactive CLI tools.
-        .package(url: "https://github.com/vapor/console.git", from: "3.0.0"),
+        /// Any other dependencies ...
+        .package(url: "https://github.com/vapor/leaf.git", from: "3.0.0")
     ],
     targets: [
-        .target(name: "App", dependencies: ["Command", "Vapor"]),
+        .target(name: "App", dependencies: ["Leaf", "Vapor"]),
         .target(name: "Run", dependencies: ["App"]),
         .testTarget(name: "AppTests", dependencies: ["App"])
     ]
 )
-

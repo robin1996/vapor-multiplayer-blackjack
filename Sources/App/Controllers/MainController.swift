@@ -36,6 +36,7 @@ extension MainController: GameControllerDelegate {
 
     func gameEnded(with clients: Clients, gameController: GameController) {
         clientPool.sendGlobal(message: "Game ended with \(nameList(of: clients))")
+        guard !clientPool.clients.isEmpty else { return }
         gameController.start(withClients: clientPool.clients)
     }
 
@@ -63,6 +64,37 @@ extension MainController: CasterPoolDelegate {
     func casterConnected(_ socket: WebSocket) {
         let data = try! BlackjackEncoder().encode(gameController.getGameState())
         socket.send(data)
+    }
+
+}
+
+// MARK: - Real time commands
+extension MainController {
+
+    func getState() -> String {
+        var result = "No game 🥺"
+        if let data = try? BlackjackEncoder().encode(gameController.getGameState()),
+            let string = String(data: data, encoding: .utf8) {
+            result = string
+        }
+        return result
+    }
+
+    func getClients() -> String {
+        return clientPool.clients.reduce("", { (text, client) -> String in
+            return "\(text)\(client.model)\t\(String(describing: client.socket))\n"
+        })
+    }
+
+    func getCasters() -> String {
+        return casterPool.casters.reduce("", { (text, caster) -> String in
+            return "\(text)\(String(describing: caster))\n"
+        })
+    }
+
+    func killGame() -> String {
+        gameController.end()
+        return "Done 👍"
     }
 
 }
