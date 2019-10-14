@@ -11,7 +11,7 @@ class MainController {
 
     let casterPool = CasterPoolController()
     let clientPool = ClientPoolController()
-    private let gameController = GameController()
+    let gameController = GameController()
 
     init() {
         gameController.delegate = self

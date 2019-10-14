@@ -148,6 +148,7 @@ class GameController {
                 onLoop: self.gameLoop
             )
         }
+        updateCaster()
         gameLoop.scheduleTask(in: TimeAmount.seconds(5)) { [weak self] in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
             print("🎬 Game ended")
@@ -158,6 +159,7 @@ class GameController {
                     onLoop: self.gameLoop
                 )
             })
+            self.updateCaster()
             self.gameLoop.scheduleTask(in: TimeAmount.seconds(2)) { [weak self] in
                 self?.start()
             }
