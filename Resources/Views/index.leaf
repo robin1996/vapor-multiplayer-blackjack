@@ -1,3 +1,4 @@
+#embed("template")
 <h1>MULTIPLAYER BLACKJACK!!!</h1>
 <table>
     #for(page in pages) {
@@ -7,4 +8,3 @@
     </tr>
     }
 </table>
-
