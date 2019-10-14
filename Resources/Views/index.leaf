@@ -1,2 +1,10 @@
 <h1>MULTIPLAYER BLACKJACK!!!</h1>
-This is a test
+<table>
+    #for(page in pages) {
+    <tr>
+        <td><a href="/#(page.route)">#(page.title)</a></td>
+        <td>#(page.description)</td>
+    </tr>
+    }
+</table>
+

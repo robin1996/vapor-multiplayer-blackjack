@@ -72,6 +72,7 @@ class GameController {
             updateCaster()
         }
         let currentPlayer = player(forTurn: turn)
+        currentPlayer.model.status = .inProgress
         guard let hand = currentPlayer.hand else {
             print("☣️ MISSING HAND ☢️"); return
         }
@@ -83,7 +84,9 @@ class GameController {
                                                                  // being called
                                                                  // more than o-
                                                                  // nce a round.
-                completeGame()
+                gameLoop.scheduleTask(in: TimeAmount.seconds(1)) { [weak self] in
+                    self?.completeGame()
+                }
             } else {
                 wait(
                     currentPlayer,
@@ -108,7 +111,6 @@ class GameController {
             return
         }
         print("🙏 Requesting action from \(currentPlayer.model.username)")
-        currentPlayer.model.status = .inProgress
         try! currentPlayer.request(
             actions: [.hit, .stand],
             onLoop: gameLoop
