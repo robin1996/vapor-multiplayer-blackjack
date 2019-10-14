@@ -24,7 +24,9 @@ class Dealer: Player {
         case (.stake, _):
             promise.succeed(result: PlayerResponse(action: .stake, value: -1))
         case (.hit, ...17):
-            promise.succeed(result: PlayerResponse(action: .hit, value: nil))
+            eventLoop.scheduleTask(in: TimeAmount.seconds(1)) {
+                promise.succeed(result: PlayerResponse(action: .hit, value: nil))
+            }
         case (.stand, _):
             promise.succeed(result: PlayerResponse(action: .stand, value: 0))
         default:
