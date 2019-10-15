@@ -27,6 +27,7 @@ class GameController {
 
     weak var delegate: GameControllerDelegate?
     weak var broadcaster: Broadcaster?
+    weak var database: DatabaseController?
 
     func start(withClients clients: Clients? = nil) {
         if let clients = clients {
@@ -146,6 +147,7 @@ class GameController {
                 .bust : player.hand!.beatsDealers(
                     hand: dealer.hand!
                 ) ? .win : .lose
+            database?.updateWinningsFor(player: player)
             _ = try! player.request(
                 actions: [],
                 onLoop: self.gameLoop
@@ -283,6 +285,14 @@ class GameController {
         return GameState(players: clients.map({ (client) -> PlayerModel in
             client.model
         }), dealer: dealer.model)
+    }
+
+    func logWinningsFor(player: Player) {
+        if player.model.status == .win {
+
+        } else {
+
+        }
     }
 
 }
