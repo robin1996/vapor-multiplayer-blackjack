@@ -37,7 +37,7 @@ class DatabaseController: Service {
         let sqlitePlayer = player.sqliteModel()
         return container.withPooledConnection(to: .sqlite) { (connection) -> Future<Void> in
             let promise = connection.eventLoop.newPromise(of: Void.self)
-            sqlitePlayer.save(on: connection).addAwaiter { (result) in
+            let callback: (FutureResult<SQLitePlayer>) -> Void = { (result) in
                 if let error = result.error {
                     print("⚠️ Error saving \(name): \(error.localizedDescription)")
                     promise.fail(error: error)
@@ -49,6 +49,14 @@ class DatabaseController: Service {
                     promise.fail(error: DatabaseError.NoDatabase)
                 }
             }
+            // Need to do the following because .save doesn't work.
+            SQLitePlayer.find(name, on: connection).addAwaiter(callback: { (result) in
+                if let test = result.result, test != nil {
+                    sqlitePlayer.update(on: connection).addAwaiter(callback: callback)
+                } else {
+                    sqlitePlayer.create(on: connection).addAwaiter(callback: callback)
+                }
+            })
             return promise.futureResult
         }
     }
