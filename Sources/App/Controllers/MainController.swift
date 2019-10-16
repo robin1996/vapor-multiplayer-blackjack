@@ -12,6 +12,7 @@ class MainController {
     let casterPool = CasterPoolController()
     let clientPool = ClientPoolController()
     let gameController = GameController()
+    weak var database: DatabaseController?
 
     init() {
         gameController.delegate = self
@@ -25,12 +26,15 @@ class MainController {
 extension MainController: Provider {
 
     func register(_ services: inout Services) throws {
-        try services.register(DatabaseController())
+        services.register(DatabaseController())
     }
 
     func didBoot(_ container: Container) throws -> EventLoopFuture<Void> {
-        gameController.database = try container.make(DatabaseController.self)
-        gameController.database?.app = container
+        let database = try container.make(DatabaseController.self)
+        database.container = container
+        self.database = database
+        gameController.database = database
+        clientPool.database = database
         return .done(on: container)
     }
 
@@ -68,7 +72,6 @@ extension MainController: ClientPoolDelegate {
 
     func clientConnected(_ client: ClientController) {
         gameController.end()
-        gameController.start(withClients: clientPool.clients)
     }
 
 }

@@ -7,7 +7,7 @@
 
 import FluentSQLite
 
-final class SQLitePlayer: SQLiteStringModel, SQLiteMigration {
+struct SQLitePlayer: SQLiteStringModel, SQLiteMigration {
     var id: String? {
         get {
             return username
@@ -18,8 +18,4 @@ final class SQLitePlayer: SQLiteStringModel, SQLiteMigration {
     }
     var username: String?
     var winnings: Int
-
-    init(username: String, winnings: Int) {
-        self.username = username; self.winnings = winnings
-    }
 }

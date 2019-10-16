@@ -1,0 +1,14 @@
+#embed("template")
+<h1>Database</h1>
+<table>
+    <tr>
+        <td>Name</td>
+        <td>Winnings</td>
+    </tr>
+    #for(player in players) {
+    <tr>
+        <td>#(player.username)</td>
+        <td>#(player.winnings)</td>
+    </tr>
+    }
+</table>

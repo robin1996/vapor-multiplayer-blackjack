@@ -1,7 +1,17 @@
 #embed("template")
 <h1>MULTIPLAYER BLACKJACK!!!</h1>
+<h2>Commands</h2>
 <table>
-    #for(page in pages) {
+    #for(page in commands) {
+    <tr>
+        <td><a href="/#(page.route)">#(page.title)</a></td>
+        <td>#(page.description)</td>
+    </tr>
+    }
+</table>
+<h2>Database</h2>
+<table>
+    #for(page in database) {
     <tr>
         <td><a href="/#(page.route)">#(page.title)</a></td>
         <td>#(page.description)</td>

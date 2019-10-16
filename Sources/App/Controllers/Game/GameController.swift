@@ -147,13 +147,15 @@ class GameController {
                 .bust : player.hand!.beatsDealers(
                     hand: dealer.hand!
                 ) ? .win : .lose
-            database?.updateWinningsFor(player: player)
+            let bet = player.hand?.stake ?? 0
+            player.model.winnings += player.model.status == .win ? bet : -bet
             _ = try! player.request(
                 actions: [],
                 onLoop: self.gameLoop
             )
         }
         updateCaster()
+        saveClientPlayerModels()
         gameLoop.scheduleTask(in: TimeAmount.seconds(5)) { [weak self] in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
             print("🎬 Game ended")
@@ -292,6 +294,12 @@ class GameController {
 
         } else {
 
+        }
+    }
+
+    func saveClientPlayerModels() {
+        clients.forEach { (client) in
+            _ = database?.savePlayer(client.model)
         }
     }
 

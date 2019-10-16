@@ -16,13 +16,13 @@ enum PageCodingKeys: String, CodingKey {
     case route, description, title
 }
 
-protocol Page: Encodable {
+protocol EncodablePage: Encodable {
     var route: String { get }
     var description: String { get }
     var title: String { get }
 }
 
-extension Page {
+extension EncodablePage {
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: PageCodingKeys.self)
         try container.encode(route, forKey: .route)
@@ -33,33 +33,14 @@ extension Page {
 
 extension MainController {
 
-    enum Location: Page {
+    enum Page: EncodablePage {
+        // Pages
         case index
+
+        // Database
         case database
 
-        var route: String {
-            switch self {
-            case .index: return ""
-            case .database: return "database"
-            }
-        }
-
-        var description: String {
-            switch self {
-            case .index: return "The home page."
-            case .database: return "Player database"
-            }
-        }
-
-        var title: String {
-            switch self {
-            case .index: return "Home"
-            case .database: return "database"
-            }
-        }
-    }
-
-    enum Command: Page, CaseIterable {
+        // Commands
         case kill
         case casters
         case clients
@@ -67,6 +48,8 @@ extension MainController {
 
         var route: String {
             switch self {
+            case .index: return ""
+            case .database: return "database"
             case .casters: return "casters"
             case .clients: return "clients"
             case .kill: return "kill"
@@ -76,6 +59,8 @@ extension MainController {
 
         var description: String {
             switch self {
+            case .index: return "The home page."
+            case .database: return "Player database"
             case .casters: return "List of the currently connected casters."
             case .clients: return "List of the currently connected clients."
             case .state: return "The current game state."
@@ -89,35 +74,43 @@ extension MainController {
             case .clients: return "Get Clients"
             case .state: return "Get State"
             case .kill: return "Kill Game"
+            case .index: return "Home"
+            case .database: return "database"
             }
         }
     }
+
+    typealias Params<T> = [String: T] where T: Encodable
 
     func routes(_ router: Router) throws {
         weak var `self` = self
 
         router.get { (req) -> Future<View> in
-            return try req.view().render("index", ["pages": Command.allCases])
+            return try req.view().render("index", [
+                "commands": [Page.casters, Page.clients, Page.database, Page.kill],
+                "database": [Page.database]
+            ])
         }
 
-        router.get(Location.database.route) { (req) -> Future<View> in
+        // Database
+        router.get(Page.database.route) { [weak self] (req) -> Future<View> in
             let promise = req.sharedContainer.eventLoop.newPromise(View.self)
-            SQLitePlayer.query(on: req).all().addAwaiter(callback: { (result) in
-                guard let players = result.result else {
-                    promise.fail(error: DatabaseError.NoDatabase); return
+            DatabaseController.getPlayers(on: req).addAwaiter(callback: { (result) in
+                if let players = result.result,
+                    let view = try? req.view().render("database", ["players": players]) {
+                    view.addAwaiter(callback: { (result) in
+                        if let view = result.result {
+                            promise.succeed(result: view)
+                        } else if let error = result.error {
+                            print(error.localizedDescription)
+                            promise.fail(error: error)
+                        } else {
+                            promise.fail(error: DatabaseError.BadRender)
+                        }
+                    })
+                } else {
+                    promise.fail(error: DatabaseError.BadRender)
                 }
-                let text = players.reduce("", { (result, player) -> String in
-                    return "\(result)\(player.username ?? "N/a")\t\(player.winnings)\n"
-                })
-                guard let view = try? req.view().render("result", ["result": text]) else {
-                    promise.fail(error: DatabaseError.BadRender); return
-                }
-                view.addAwaiter(callback: { (result) in
-                    guard let view = result.result else {
-                        promise.fail(error: DatabaseError.BadRender); return
-                    }
-                    promise.succeed(result: view)
-                })
             })
             return promise.futureResult
         }
@@ -128,10 +121,10 @@ extension MainController {
                 return try req.view().render("result", ["result": command?() ?? "☢️ BAD ☢️"])
             }
         }
-        router.get(Command.kill.route, use: resultViewRenderer(for: self?.killGame))
-        router.get(Command.casters.route, use: resultViewRenderer(for: self?.getCasters))
-        router.get(Command.clients.route, use: resultViewRenderer(for: self?.getClients))
-        router.get(Command.state.route, use: resultViewRenderer(for: self?.getState))
+        router.get(Page.kill.route, use: resultViewRenderer(for: self?.killGame))
+        router.get(Page.casters.route, use: resultViewRenderer(for: self?.getCasters))
+        router.get(Page.clients.route, use: resultViewRenderer(for: self?.getClients))
+        router.get(Page.state.route, use: resultViewRenderer(for: self?.getState))
     }
 
 }

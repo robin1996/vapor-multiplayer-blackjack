@@ -88,7 +88,6 @@ class Hand {
     var cards: [Card] = []
     var totalType: TotalType = .soft
     var stake: Int
-    var winnings: Int = 0
     var hasStood = false // Shouldn't be encoded
 
     init(stake: Int) {
@@ -140,7 +139,6 @@ extension Hand: Encodable {
         try container.encode(cards, forKey: .cards)
         try container.encode(totalType, forKey: .totalType)
         try container.encode(stake, forKey: .stake)
-        try container.encode(winnings, forKey: .winnings)
         var totalString = ""
         let total = self.total()
         switch total.high {
@@ -165,14 +163,20 @@ class PlayerModel: Encodable {
     var status = PlayerStatus.waiting
     var hands: [Hand] = []
     var insurance: Int = 0
-    var winnings: Int {
-        return hands.sum { (hand) -> Int in
-            return hand.winnings
-        }
-    }
+    var winnings: Int = 0
 
     init(username: String) {
         self.username = username
+    }
+
+    init?(sqliteModel: SQLitePlayer) {
+        guard let name = sqliteModel.username else { return nil }
+        username = name
+        winnings = sqliteModel.winnings
+    }
+
+    func sqliteModel() -> SQLitePlayer {
+        return SQLitePlayer(username: username, winnings: winnings)
     }
 }
 

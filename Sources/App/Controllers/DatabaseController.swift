@@ -9,35 +9,47 @@ import Vapor
 
 class DatabaseController: Service {
 
-    weak var app: Container? {
-        didSet {
-            getPlayers()?.addAwaiter(callback: { [weak self] (result) in
-                guard let players = result.result else { return }
-                self?.players = players
-            })
+    weak var container: Container?
+
+    func playerModelFor(username: String) -> Future<PlayerModel>? {
+        guard let container = container else { return nil }
+        let promise = container.eventLoop.newPromise(PlayerModel.self)
+        SQLitePlayer.find(username, on: Request(using: container)).addAwaiter { (result) in
+            if let maybePlayer = result.result,
+                let player = maybePlayer,
+                let playerModel = PlayerModel(sqliteModel: player) {
+                promise.succeed(result: playerModel)
+            } else {
+                promise.succeed(result: PlayerModel(username: username))
+            }
         }
-    }
-    private var players: [SQLitePlayer] = []
-
-    func getPlayers() -> Future<[SQLitePlayer]>? {
-        guard let app = app else { return nil }
-        return SQLitePlayer.query(on: Request(using: app)).all()
+        return promise.futureResult
     }
 
-    func updateWinningsFor(player: Player) {
-        guard let hand = player.hand else { return }
-        guard let app = app else { return }
-        let ammount = player.model.status == .win ? hand.stake : -hand.stake
-        let name = player.model.username
-        if let sqplayer = players.reduce(nil, { (_, sqplayer) -> SQLitePlayer? in
-            return sqplayer.username == name ? sqplayer : nil
-        }) {
-            sqplayer.winnings += ammount
-            _ = sqplayer.update(on: Request(using: app))
-        } else {
-            let sqplayer = SQLitePlayer(username: name, winnings: ammount)
-            _ = sqplayer.create(on: Request(using: app))
-            players.append(sqplayer)
+    static func getPlayers(on request: Request) -> Future<[SQLitePlayer]> {
+        return SQLitePlayer.query(on: request).all()
+    }
+
+    func savePlayer(_ player: PlayerModel) -> Future<Void>? {
+        guard let container = container else { return nil }
+        let name = player.username
+        print("💽 Saving \(name)")
+        let sqlitePlayer = player.sqliteModel()
+        return container.withPooledConnection(to: .sqlite) { (connection) -> Future<Void> in
+            let promise = connection.eventLoop.newPromise(of: Void.self)
+            sqlitePlayer.save(on: connection).addAwaiter { (result) in
+                if let error = result.error {
+                    print("⚠️ Error saving \(name): \(error.localizedDescription)")
+                    promise.fail(error: error)
+                } else if let name = result.result?.username {
+                    print("💰 Winnings saved for \(name)")
+                    promise.succeed()
+                } else {
+                    print("☣️ UNKNOWN DATABASE ERROR ☣️")
+                    promise.fail(error: DatabaseError.NoDatabase)
+                }
+            }
+            return promise.futureResult
         }
     }
 
