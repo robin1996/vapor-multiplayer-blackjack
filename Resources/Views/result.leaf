@@ -1,3 +1,8 @@
 #embed("template")
-<h1>Result</h1>
-<code>#(result)</code>
+<body>
+    <div class = "m-4">
+        <h1>Result</h1>
+        <code>#(values.result)</code>
+    </div>
+    #embed("js")
+</body>

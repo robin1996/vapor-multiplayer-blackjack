@@ -11,10 +11,12 @@ let package = Package(
         .package(url: "https://github.com/vapor/vapor.git", from: "3.0.0"),
 
         /// Any other dependencies ...
-        .package(url: "https://github.com/vapor/leaf.git", from: "3.0.0")
+        .package(url: "https://github.com/vapor/leaf.git", from: "3.0.0"),
+
+        .package(url: "https://github.com/vapor/fluent-sqlite-driver.git", from: "3.0.0")
     ],
     targets: [
-        .target(name: "App", dependencies: ["Leaf", "Vapor"]),
+        .target(name: "App", dependencies: ["FluentSQLite", "Leaf", "Vapor"]),
         .target(name: "Run", dependencies: ["App"]),
         .testTarget(name: "AppTests", dependencies: ["App"])
     ]

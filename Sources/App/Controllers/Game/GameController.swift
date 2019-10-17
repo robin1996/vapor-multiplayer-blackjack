@@ -27,6 +27,7 @@ class GameController {
 
     weak var delegate: GameControllerDelegate?
     weak var broadcaster: Broadcaster?
+    weak var database: DatabaseController?
 
     func start(withClients clients: Clients? = nil) {
         if let clients = clients {
@@ -43,6 +44,10 @@ class GameController {
     }
 
     func end() {
+        players.forEach { (player) in
+            player.model.status = .ended
+        }
+        updateCaster()
         delegate?.gameEnded(with: clients, gameController: self)
     }
 
@@ -146,12 +151,15 @@ class GameController {
                 .bust : player.hand!.beatsDealers(
                     hand: dealer.hand!
                 ) ? .win : .lose
+            let bet = player.hand?.stake ?? 0
+            player.model.winnings += player.model.status == .win ? bet : -bet
             _ = try! player.request(
                 actions: [],
                 onLoop: self.gameLoop
             )
         }
         updateCaster()
+        saveClientPlayerModels()
         gameLoop.scheduleTask(in: TimeAmount.seconds(5)) { [weak self] in
             guard let self = self else { print("☢️ GAME DEAD ☢️"); return }
             print("🎬 Game ended")
@@ -283,6 +291,20 @@ class GameController {
         return GameState(players: clients.map({ (client) -> PlayerModel in
             client.model
         }), dealer: dealer.model)
+    }
+
+    func logWinningsFor(player: Player) {
+        if player.model.status == .win {
+
+        } else {
+
+        }
+    }
+
+    func saveClientPlayerModels() {
+        clients.forEach { (client) in
+            _ = database?.savePlayer(client.model)
+        }
     }
 
 }

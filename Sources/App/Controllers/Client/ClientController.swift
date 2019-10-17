@@ -16,9 +16,9 @@ class ClientController: Player {
     weak var socket: WebSocket?
     var model: PlayerModel
 
-    init(socket: WebSocket, username: String) {
+    init(socket: WebSocket, model: PlayerModel) {
         self.socket = socket
-        self.model = PlayerModel(username: username)
+        self.model = model
     }
 
     func request(

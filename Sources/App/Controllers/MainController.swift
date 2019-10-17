@@ -22,6 +22,22 @@ class MainController {
 
 }
 
+extension MainController: Provider {
+
+    func register(_ services: inout Services) throws {
+        services.register(DatabaseController())
+    }
+
+    func didBoot(_ container: Container) throws -> EventLoopFuture<Void> {
+        let database = try container.make(DatabaseController.self)
+        database.container = container
+        gameController.database = database
+        clientPool.database = database
+        return .done(on: container)
+    }
+
+}
+
 extension MainController: GameControllerDelegate {
 
     private func nameList(of clients: Clients) -> String {
@@ -54,7 +70,6 @@ extension MainController: ClientPoolDelegate {
 
     func clientConnected(_ client: ClientController) {
         gameController.end()
-        gameController.start(withClients: clientPool.clients)
     }
 
 }
@@ -82,13 +97,18 @@ extension MainController {
 
     func getClients() -> String {
         return clientPool.clients.reduce("", { (text, client) -> String in
-            return "\(text)\(client.model)\t\(String(describing: client.socket))\n"
+            let newText = "\(text)\(client.model.username)\t"
+            if let socket = client.socket {
+                return "\(newText)\(ObjectIdentifier(socket))\n"
+            } else {
+                return "\(newText)\n"
+            }
         })
     }
 
     func getCasters() -> String {
         return casterPool.casters.reduce("", { (text, caster) -> String in
-            return "\(text)\(String(describing: caster))\n"
+            return "\(text)\(ObjectIdentifier(caster))\n"
         })
     }
 

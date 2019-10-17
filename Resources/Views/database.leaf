@@ -1,0 +1,23 @@
+#embed("template")
+<body>
+    <div class = "m-4">
+        <h1>Database</h1>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Winnings</th>
+                </tr>
+            </thead>
+            <tbody>
+                #for(player in values.players) {
+                <tr>
+                    <th scope="row">#(player.username)</th>
+                    <td>#(player.winnings)p</td>
+                </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    #embed("js")
+</body>
