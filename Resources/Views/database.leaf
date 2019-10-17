@@ -1,14 +1,19 @@
 #embed("template")
 <h1>Database</h1>
-<table>
-    <tr>
-        <td>Name</td>
-        <td>Winnings</td>
-    </tr>
-    #for(player in players) {
-    <tr>
-        <td>#(player.username)</td>
-        <td>#(player.winnings)</td>
-    </tr>
-    }
+<table class="table">
+    <thead>
+        <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Winnings</th>
+        </tr>
+    </thead>
+    <tbody>
+        #for(player in players) {
+        <tr>
+            <th scope="row">#(player.username)</th>
+            <td>#(player.winnings)p</td>
+        </tr>
+        }
+    </tbody>
 </table>
+#embed("js")
