@@ -91,7 +91,7 @@ extension MainController {
 
         router.get { (req) -> Future<View> in
             return try req.view().render("index", [
-                "commands": [Page.casters, Page.clients, Page.database, Page.kill],
+                "commands": [Page.casters, Page.clients, Page.state, Page.kill],
                 "database": [Page.database, Page.takings]
             ])
         }
