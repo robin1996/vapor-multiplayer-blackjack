@@ -2,6 +2,11 @@
 <body>
     <div class = "m-4">
         <h1>MULTIPLAYER BLACKJACK!!!</h1>
+        #if(values.alert) {
+            <div class="alert alert-warning" role="alert">
+                #(values.alert)
+            </div>
+        }
         <h2>Commands</h2>
         <table>
             #for(page in commands) {

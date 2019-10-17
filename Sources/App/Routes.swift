@@ -113,8 +113,35 @@ extension MainController {
             }
         }
 
+        func renderAwaiter(promise: EventLoopPromise<View>) -> (FutureResult<View>) -> Void {
+            return { (result) in
+                if let view = result.result {
+                    promise.succeed(result: view)
+                } else if let error = result.error {
+                    print(error.localizedDescription)
+                    promise.fail(error: error)
+                } else {
+                    promise.fail(error: DatabaseError.BadRender)
+                }
+            }
+        }
+
         // Index
         router.get("", use: Context<String>().renderer(forTemplate: "index"))
+
+        router.get { (req) -> Future<View> in
+            let promise = req.sharedContainer.eventLoop.newPromise(View.self)
+            let alert = !(self?.clientPool.clients.isEmpty ?? true) ?
+                "A game is in progress!" : nil
+            if let renderer = try? Context(values: ["alert": alert]).renderer(
+                forTemplate: "index"
+                )(req) {
+                renderer.addAwaiter(callback: renderAwaiter(promise: promise))
+            } else {
+                promise.fail(error: DatabaseError.BadRender)
+            }
+            return promise.futureResult
+        }
 
         // Database
         router.get(Page.database.route) { (req) -> Future<View> in
@@ -123,21 +150,12 @@ extension MainController {
                 guard let players = result.result,
                     let renderer = try? Context(
                         values: ["players": players]
-                    ).renderer(
-                        forTemplate: "database"
-                    )(req) else {
-                        promise.fail(error: DatabaseError.BadRender); return
+                        ).renderer(
+                            forTemplate: "database"
+                        )(req) else {
+                            promise.fail(error: DatabaseError.BadRender); return
                 }
-                renderer.addAwaiter(callback: { (result) in
-                    if let view = result.result {
-                        promise.succeed(result: view)
-                    } else if let error = result.error {
-                        print(error.localizedDescription)
-                        promise.fail(error: error)
-                    } else {
-                        promise.fail(error: DatabaseError.BadRender)
-                    }
-                })
+                renderer.addAwaiter(callback: renderAwaiter(promise: promise))
             })
             return promise.futureResult
         }
@@ -155,16 +173,7 @@ extension MainController {
                 })(req) else {
                     promise.fail(error: DatabaseError.BadRender); return
                 }
-                renderer.addAwaiter(callback: { (result) in
-                    if let view = result.result {
-                        promise.succeed(result: view)
-                    } else if let error = result.error {
-                        print(error.localizedDescription)
-                        promise.fail(error: error)
-                    } else {
-                        promise.fail(error: DatabaseError.BadRender)
-                    }
-                })
+                renderer.addAwaiter(callback: renderAwaiter(promise: promise))
             })
             return promise.futureResult
         }
