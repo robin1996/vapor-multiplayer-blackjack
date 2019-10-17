@@ -39,6 +39,7 @@ extension MainController {
 
         // Database
         case database
+        case takings
 
         // Commands
         case kill
@@ -54,6 +55,7 @@ extension MainController {
             case .clients: return "clients"
             case .kill: return "kill"
             case .state: return "state"
+            case .takings: return "takings"
             }
         }
 
@@ -65,6 +67,7 @@ extension MainController {
             case .clients: return "List of the currently connected clients."
             case .state: return "The current game state."
             case .kill: return "Kill the current game."
+            case .takings: return "The total takings by the house."
             }
         }
 
@@ -75,7 +78,8 @@ extension MainController {
             case .state: return "Get State"
             case .kill: return "Kill Game"
             case .index: return "Home"
-            case .database: return "database"
+            case .database: return "Database"
+            case .takings: return "Total Takings"
             }
         }
     }
@@ -88,7 +92,7 @@ extension MainController {
         router.get { (req) -> Future<View> in
             return try req.view().render("index", [
                 "commands": [Page.casters, Page.clients, Page.database, Page.kill],
-                "database": [Page.database]
+                "database": [Page.database, Page.takings]
             ])
         }
 
@@ -111,6 +115,34 @@ extension MainController {
                 } else {
                     promise.fail(error: DatabaseError.BadRender)
                 }
+            })
+            return promise.futureResult
+        }
+        router.get(Page.takings.route) { (req) -> Future<View> in
+            let promise = req.sharedContainer.eventLoop.newPromise(View.self)
+            DatabaseController.getPlayers(on: req).addAwaiter(callback: { (result) in
+                guard let players = result.result else {
+                    promise.fail(error: DatabaseError.BadRender); return
+                }
+                let takings = -(players.reduce(0, { (result, player) -> Int in
+                    return result + player.winnings
+                }))
+                guard let view = try? req.view().render(
+                    "result",
+                    ["result": "£\(takings / 100)"]
+                ) else {
+                    promise.fail(error: DatabaseError.BadRender); return
+                }
+                view.addAwaiter(callback: { (result) in
+                    if let view = result.result {
+                        promise.succeed(result: view)
+                    } else if let error = result.error {
+                        print(error.localizedDescription)
+                        promise.fail(error: error)
+                    } else {
+                        promise.fail(error: DatabaseError.BadRender)
+                    }
+                })
             })
             return promise.futureResult
         }
