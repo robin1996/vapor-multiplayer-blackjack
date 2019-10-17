@@ -84,37 +84,60 @@ extension MainController {
         }
     }
 
-    typealias Params<T> = [String: T] where T: Encodable
+    struct Context<T: Encodable>: Encodable {
+        let commands = [Page.casters, Page.clients, Page.state, Page.kill]
+        let database = [Page.database, Page.takings]
+        let values: [String: T]?
+        init(values: [String: T]? = nil) {
+            self.values = values
+        }
+
+        func renderer(forTemplate template: String) -> Renderer {
+            return { (req) -> Future<View> in
+                return try req.view().render(template, self)
+            }
+        }
+    }
+
+    typealias Renderer = (Request) throws -> Future<View>
 
     func routes(_ router: Router) throws {
         weak var `self` = self
 
-        router.get { (req) -> Future<View> in
-            return try req.view().render("index", [
-                "commands": [Page.casters, Page.clients, Page.state, Page.kill],
-                "database": [Page.database, Page.takings]
-            ])
+        func resultViewRenderer(for command: (() -> String)?) -> Renderer {
+            return { (req) -> Future<View> in
+                return try req.view().render(
+                    "result",
+                    Context(values: ["result": command?() ?? "☢️ BAD ☢️"])
+                )
+            }
         }
 
+        // Index
+        router.get("", use: Context<String>().renderer(forTemplate: "index"))
+
         // Database
-        router.get(Page.database.route) { [weak self] (req) -> Future<View> in
+        router.get(Page.database.route) { (req) -> Future<View> in
             let promise = req.sharedContainer.eventLoop.newPromise(View.self)
             DatabaseController.getPlayers(on: req).addAwaiter(callback: { (result) in
-                if let players = result.result,
-                    let view = try? req.view().render("database", ["players": players]) {
-                    view.addAwaiter(callback: { (result) in
-                        if let view = result.result {
-                            promise.succeed(result: view)
-                        } else if let error = result.error {
-                            print(error.localizedDescription)
-                            promise.fail(error: error)
-                        } else {
-                            promise.fail(error: DatabaseError.BadRender)
-                        }
-                    })
-                } else {
-                    promise.fail(error: DatabaseError.BadRender)
+                guard let players = result.result,
+                    let renderer = try? Context(
+                        values: ["players": players]
+                    ).renderer(
+                        forTemplate: "database"
+                    )(req) else {
+                        promise.fail(error: DatabaseError.BadRender); return
                 }
+                renderer.addAwaiter(callback: { (result) in
+                    if let view = result.result {
+                        promise.succeed(result: view)
+                    } else if let error = result.error {
+                        print(error.localizedDescription)
+                        promise.fail(error: error)
+                    } else {
+                        promise.fail(error: DatabaseError.BadRender)
+                    }
+                })
             })
             return promise.futureResult
         }
@@ -124,16 +147,15 @@ extension MainController {
                 guard let players = result.result else {
                     promise.fail(error: DatabaseError.BadRender); return
                 }
-                let takings = -(players.reduce(0, { (result, player) -> Int in
-                    return result + player.winnings
-                }))
-                guard let view = try? req.view().render(
-                    "result",
-                    ["result": "£\(takings / 100)"]
-                ) else {
+                guard let renderer = try? resultViewRenderer(for: { () -> String in
+                    let takings = -(players.reduce(0, { (result, player) -> Int in
+                        return result + player.winnings
+                    }))
+                    return "£\(takings / 100)"
+                })(req) else {
                     promise.fail(error: DatabaseError.BadRender); return
                 }
-                view.addAwaiter(callback: { (result) in
+                renderer.addAwaiter(callback: { (result) in
                     if let view = result.result {
                         promise.succeed(result: view)
                     } else if let error = result.error {
@@ -148,11 +170,6 @@ extension MainController {
         }
 
         // Commands
-        func resultViewRenderer(for command: (() -> String)?) -> (Request) throws -> Future<View> {
-            return { (req) -> Future<View> in
-                return try req.view().render("result", ["result": command?() ?? "☢️ BAD ☢️"])
-            }
-        }
         router.get(Page.kill.route, use: resultViewRenderer(for: self?.killGame))
         router.get(Page.casters.route, use: resultViewRenderer(for: self?.getCasters))
         router.get(Page.clients.route, use: resultViewRenderer(for: self?.getClients))
