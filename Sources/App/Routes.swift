@@ -62,7 +62,7 @@ extension MainController {
         var description: String {
             switch self {
             case .index: return "The home page."
-            case .database: return "Player database"
+            case .database: return "Player database."
             case .casters: return "List of the currently connected casters."
             case .clients: return "List of the currently connected clients."
             case .state: return "The current game state."

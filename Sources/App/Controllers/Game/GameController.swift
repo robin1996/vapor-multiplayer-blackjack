@@ -44,6 +44,10 @@ class GameController {
     }
 
     func end() {
+        players.forEach { (player) in
+            player.model.status = .ended
+        }
+        updateCaster()
         delegate?.gameEnded(with: clients, gameController: self)
     }
 
