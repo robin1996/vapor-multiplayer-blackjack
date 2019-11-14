@@ -182,7 +182,7 @@ class PlayerModel: Encodable {
 
 struct GameState: Encodable {
     var players: [PlayerModel]
-    var dealer: PlayerModel
+    var dealer: PlayerModel?
 }
 
 enum PlayerAction: String, Codable {

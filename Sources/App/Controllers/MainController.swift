@@ -52,8 +52,11 @@ extension MainController: GameControllerDelegate {
 
     func gameEnded(with clients: Clients, gameController: GameController) {
         clientPool.sendGlobal(message: "Game ended with \(nameList(of: clients))")
-        guard !clientPool.clients.isEmpty else { return }
-        gameController.start(withClients: clientPool.clients)
+        if clientPool.clients.isEmpty {
+            casterPool.cast(state: GameState(players: [], dealer: nil))
+        } else {
+            gameController.start(withClients: clientPool.clients)
+        }
     }
 
 }
@@ -77,7 +80,9 @@ extension MainController: ClientPoolDelegate {
 extension MainController: CasterPoolDelegate {
 
     func casterConnected(_ socket: WebSocket) {
-        let data = try! BlackjackEncoder().encode(gameController.getGameState())
+        let data = casterPool.casters.isEmpty ?
+            try! BlackjackEncoder().encode(GameState(players: [], dealer: nil)) :
+            try! BlackjackEncoder().encode(gameController.getGameState())
         socket.send(data)
     }
 
