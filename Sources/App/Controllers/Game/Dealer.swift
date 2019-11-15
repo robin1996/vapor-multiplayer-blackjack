@@ -23,7 +23,7 @@ class Dealer: Player {
         switch (actions, hand?.bestTotal() ?? -1) {
         case (.stake, _):
             promise.succeed(result: PlayerResponse(action: .stake, value: -1))
-        case (.hit, ...17):
+        case (.hit, ...16):
             eventLoop.scheduleTask(in: TimeAmount.seconds(1)) {
                 promise.succeed(result: PlayerResponse(action: .hit, value: nil))
             }
